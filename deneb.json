@@ -1,16 +1,11 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "Average Total Head by Drillhole over time, with Destination (mean) thin bars visually scaled and Tailings (max) overlay (single shared y-scale)",
+  "description": "Average Total Head by Drillhole over time with Destination (thin bars) and Tailings (max) using log-scaled Y axis",
   "padding": 5,
   "autosize": { "type": "fit", "resize": true, "contains": "padding" },
 
   "signals": [
-    { "name": "legendColumns", "update": "max(1, floor(width / 95))" },
-
-    {
-      "name": "destScale",
-      "value": 40
-    }
+    { "name": "legendColumns", "update": "max(1, floor(width / 95))" }
   ],
 
   "data": [
@@ -37,7 +32,7 @@
       "name": "aggregated",
       "source": "filtered",
       "transform": [
-        { "type": "filter", "expr": "isValid(datum.TotalHeadNum)" },
+        { "type": "filter", "expr": "datum.TotalHeadNum > 0" },
         {
           "type": "aggregate",
           "groupby": ["DateDay", "Drillhole_USC"],
@@ -53,7 +48,7 @@
       "name": "destinationData",
       "source": "filtered",
       "transform": [
-        { "type": "filter", "expr": "isValid(datum.DestinationNum)" },
+        { "type": "filter", "expr": "datum.DestinationNum > 0" },
         {
           "type": "aggregate",
           "groupby": ["DateDay"],
@@ -61,8 +56,7 @@
           "ops": ["mean"],
           "as": ["DestinationValue"]
         },
-        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" },
-        { "type": "formula", "expr": "datum.DestinationValue * destScale", "as": "DestinationScaled" }
+        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" }
       ]
     },
 
@@ -70,7 +64,7 @@
       "name": "tailingsData",
       "source": "filtered",
       "transform": [
-        { "type": "filter", "expr": "isValid(datum.TailingsNum)" },
+        { "type": "filter", "expr": "datum.TailingsNum > 0" },
         {
           "type": "aggregate",
           "groupby": ["DateDay"],
@@ -107,11 +101,12 @@
 
     {
       "name": "yscale",
-      "type": "linear",
+      "type": "log",
+      "base": 10,
       "domain": {
         "fields": [
           { "data": "aggregated", "field": "AvgTotalHead" },
-          { "data": "destinationData", "field": "DestinationScaled" },
+          { "data": "destinationData", "field": "DestinationValue" },
           { "data": "tailingsData", "field": "TailingsValue" }
         ]
       },
@@ -142,7 +137,7 @@
     {
       "orient": "left",
       "scale": "yscale",
-      "title": { "signal": "'Value (Destination shown ×' + destScale + ')'" },
+      "title": "Value (log scale)",
       "grid": true
     }
   ],
@@ -154,7 +149,6 @@
       "orient": "top",
       "symbolSize": 100,
       "symbolType": "stroke",
-      "offset": 0,
       "direction": "horizontal",
       "columns": { "signal": "legendColumns" }
     }
@@ -168,18 +162,14 @@
         "enter": {
           "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": -1 },
           "width": { "value": 2 },
-
-          "y": { "scale": "yscale", "field": "DestinationScaled" },
-          "y2": { "scale": "yscale", "value": 0 },
-
+          "y": { "scale": "yscale", "field": "DestinationValue" },
+          "y2": { "scale": "yscale", "value": 1 },
           "fill": { "value": "purple" },
-          "opacity": { "value": 0.45 },
-
+          "opacity": { "value": 0.6 },
           "tooltip": {
-            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f'), 'Shown as (×destScale)': format(datum['DestinationScaled'], '.2f'), 'Multiplier': destScale}"
+            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': datum['DestinationValue']}"
           }
-        },
-        "hover": { "opacity": { "value": 0.85 } }
+        }
       }
     },
 
@@ -201,31 +191,8 @@
               "x": { "scale": "xscale", "field": "DateParsedAgg" },
               "y": { "scale": "yscale", "field": "AvgTotalHead" },
               "stroke": { "scale": "color", "field": "Drillhole_USC" },
-              "strokeWidth": { "value": 1 },
-              "tooltip": {
-                "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
-              }
-            },
-            "update": { "strokeWidth": { "value": 1 } },
-            "hover": { "strokeWidth": { "value": 2 } }
-          }
-        },
-        {
-          "type": "symbol",
-          "from": { "data": "series" },
-          "encode": {
-            "enter": {
-              "x": { "scale": "xscale", "field": "DateParsedAgg" },
-              "y": { "scale": "yscale", "field": "AvgTotalHead" },
-              "fill": { "scale": "color", "field": "Drillhole_USC" },
-              "size": { "value": 30 },
-              "opacity": { "value": 0.7 },
-              "tooltip": {
-                "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
-              }
-            },
-            "update": { "size": { "value": 30 } },
-            "hover": { "size": { "value": 50 } }
+              "strokeWidth": { "value": 1 }
+            }
           }
         }
       ]
@@ -240,13 +207,8 @@
           "y": { "scale": "yscale", "field": "TailingsValue" },
           "stroke": { "value": "orange" },
           "strokeWidth": { "value": 2 },
-          "strokeDash": { "value": [5, 5] },
-          "tooltip": {
-            "signal": "{'Date': datum['DateDay'], 'Tailings (Max)': format(datum['TailingsValue'], '.2f')}"
-          }
-        },
-        "update": { "strokeWidth": { "value": 2 } },
-        "hover": { "strokeWidth": { "value": 3 } }
+          "strokeDash": { "value": [5, 5] }
+        }
       }
     },
 
@@ -260,15 +222,14 @@
           "text": { "value": "Tailings" },
           "fill": { "value": "orange" },
           "fontSize": { "value": 12 },
-          "fontWeight": { "value": "bold" },
-          "align": { "value": "left" }
+          "fontWeight": { "value": "bold" }
         }
       }
     }
   ],
 
   "title": {
-    "text": "WL - Average Total Head & Tailings",
+    "text": "WL - Average Total Head & Tailings (Log Scale)",
     "fontSize": 16
   }
 }
