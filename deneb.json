@@ -4,6 +4,13 @@
   "padding": 5,
   "autosize": { "type": "fit", "resize": true, "contains": "padding" },
 
+  "signals": [
+    {
+      "name": "legendColumns",
+      "update": "max(1, floor(width / 95))"
+    }
+  ],
+
   "data": [
     {
       "name": "dataset"
@@ -38,6 +45,24 @@
           "fields": ["Total Head"],
           "ops": ["mean"],
           "as": ["AvgTotalHead"]
+        },
+        {
+          "type": "formula",
+          "expr": "toDate(datum['DateDay'])",
+          "as": "DateParsedAgg"
+        }
+      ]
+    },
+    {
+      "name": "destinationData",
+      "source": "filtered",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["DateDay"],
+          "fields": ["Destination"],
+          "ops": ["mean"],
+          "as": ["DestinationValue"]
         },
         {
           "type": "formula",
@@ -104,6 +129,14 @@
       "zero": false
     },
     {
+      "name": "yscale3",
+      "type": "linear",
+      "domain": { "data": "destinationData", "field": "DestinationValue" },
+      "range": "height",
+      "nice": true,
+      "zero": false
+    },
+    {
       "name": "yscale2",
       "type": "linear",
       "domain": { "data": "tailingsData", "field": "TailingsValue" },
@@ -147,7 +180,8 @@
       "symbolSize": 100,
       "symbolType": "stroke",
       "offset": 0,
-      "direction": "horizontal"
+      "direction": "horizontal",
+      "columns": { "signal": "legendColumns" }
     }
   ],
 
@@ -195,6 +229,59 @@
               "opacity": { "value": 0.7 },
               "tooltip": {
                 "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
+              }
+            },
+            "update": {
+              "size": { "value": 30 }
+            },
+            "hover": {
+              "size": { "value": 50 }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "series",
+          "data": "destinationData"
+        }
+      },
+      "marks": [
+        {
+          "type": "line",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "xscale", "field": "DateParsedAgg" },
+              "y": { "scale": "yscale3", "field": "DestinationValue" },
+              "strokeWidth": { "value": 1 },
+              "tooltip": {
+                "signal": "{'Date': datum['DateDay'], Destination: format(datum['DestinationValue'], '.2f')}"
+              }
+            },
+            "update": {
+              "strokeWidth": { "value": 1 }
+            },
+            "hover": {
+              "strokeWidth": { "value": 2 }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "xscale", "field": "DateParsedAgg" },
+              "y": { "scale": "yscale3", "field": "DestinationValue" },
+              "fill": { "scale": "color", "field": "Drillhole_USC" },
+              "size": { "value": 30 },
+              "opacity": { "value": 0.7 },
+              "tooltip": {
+                "signal": "{'Date': datum['DateDay'], Destination: format(datum['DestinationValue'], '.2f')}"
               }
             },
             "update": {
