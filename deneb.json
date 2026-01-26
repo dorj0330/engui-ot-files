@@ -1,20 +1,16 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "Average Total Head and Tailings by Drillhole over time",
+  "description": "Average Total Head by Drillhole over time, with Destination (mean) and Tailings (max) overlays",
   "padding": 5,
   "autosize": { "type": "fit", "resize": true, "contains": "padding" },
 
   "signals": [
-    {
-      "name": "legendColumns",
-      "update": "max(1, floor(width / 95))"
-    }
+    { "name": "legendColumns", "update": "max(1, floor(width / 95))" }
   ],
 
   "data": [
-    {
-      "name": "dataset"
-    },
+    { "name": "dataset" },
+
     {
       "name": "filtered",
       "source": "dataset",
@@ -23,89 +19,83 @@
           "type": "filter",
           "expr": "datum['Date_New'] != null && datum['Drillhole_USC'] != null"
         },
-        {
-          "type": "formula",
-          "expr": "toDate(datum['Date_New'])",
-          "as": "DateParsed"
-        },
-        {
-          "type": "formula",
-          "expr": "timeFormat(datum['DateParsed'], '%Y-%m-%d')",
-          "as": "DateDay"
-        }
+        { "type": "formula", "expr": "toDate(datum['Date_New'])", "as": "DateParsed" },
+        { "type": "formula", "expr": "timeFormat(datum['DateParsed'], '%Y-%m-%d')", "as": "DateDay" },
+
+        { "type": "formula", "expr": "toNumber(datum['Total Head'])", "as": "TotalHeadNum" },
+        { "type": "formula", "expr": "toNumber(datum['Destination'])", "as": "DestinationNum" },
+        { "type": "formula", "expr": "toNumber(datum['Tailings'])", "as": "TailingsNum" }
       ]
     },
+
     {
       "name": "aggregated",
       "source": "filtered",
       "transform": [
         {
+          "type": "filter",
+          "expr": "isValid(datum.TotalHeadNum)"
+        },
+        {
           "type": "aggregate",
           "groupby": ["DateDay", "Drillhole_USC"],
-          "fields": ["Total Head"],
+          "fields": ["TotalHeadNum"],
           "ops": ["mean"],
           "as": ["AvgTotalHead"]
         },
-        {
-          "type": "formula",
-          "expr": "toDate(datum['DateDay'])",
-          "as": "DateParsedAgg"
-        }
+        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" }
       ]
     },
+
     {
       "name": "destinationData",
       "source": "filtered",
       "transform": [
         {
+          "type": "filter",
+          "expr": "isValid(datum.DestinationNum)"
+        },
+        {
           "type": "aggregate",
           "groupby": ["DateDay"],
-          "fields": ["Destination"],
+          "fields": ["DestinationNum"],
           "ops": ["mean"],
           "as": ["DestinationValue"]
         },
-        {
-          "type": "formula",
-          "expr": "toDate(datum['DateDay'])",
-          "as": "DateParsedAgg"
-        }
+        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" }
       ]
     },
+
     {
       "name": "tailingsData",
       "source": "filtered",
       "transform": [
         {
+          "type": "filter",
+          "expr": "isValid(datum.TailingsNum)"
+        },
+        {
           "type": "aggregate",
           "groupby": ["DateDay"],
-          "fields": ["Tailings"],
+          "fields": ["TailingsNum"],
           "ops": ["max"],
           "as": ["TailingsValue"]
         },
-        {
-          "type": "formula",
-          "expr": "toDate(datum['DateDay'])",
-          "as": "DateParsedAgg"
-        }
+        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" }
       ]
     },
+
     {
       "name": "tailingsLabel",
       "source": "tailingsData",
       "transform": [
         {
-          "type": "aggregate",
-          "fields": ["DateParsedAgg"],
-          "ops": ["max"],
-          "as": ["MaxDate"]
+          "type": "window",
+          "sort": { "field": "DateParsedAgg", "order": "descending" },
+          "ops": ["rank"],
+          "as": ["rnk"]
         },
-        {
-          "type": "lookup",
-          "from": "tailingsData",
-          "key": "DateParsedAgg",
-          "fields": ["MaxDate"],
-          "values": ["TailingsValue", "DateParsedAgg"]
-        }
+        { "type": "filter", "expr": "datum.rnk === 1" }
       ]
     }
   ],
@@ -114,12 +104,10 @@
     {
       "name": "xscale",
       "type": "time",
-      "domain": {
-        "data": "aggregated",
-        "field": "DateParsedAgg"
-      },
+      "domain": { "data": "filtered", "field": "DateParsed" },
       "range": "width"
     },
+
     {
       "name": "yscale",
       "type": "linear",
@@ -128,6 +116,7 @@
       "nice": true,
       "zero": false
     },
+
     {
       "name": "yscale3",
       "type": "linear",
@@ -136,6 +125,7 @@
       "nice": true,
       "zero": false
     },
+
     {
       "name": "yscale2",
       "type": "linear",
@@ -144,6 +134,7 @@
       "nice": true,
       "zero": false
     },
+
     {
       "name": "color",
       "type": "ordinal",
@@ -169,6 +160,21 @@
       "title": "Average Total Head",
       "grid": true,
       "titleColor": "steelblue"
+    },
+    {
+      "orient": "right",
+      "scale": "yscale2",
+      "title": "Tailings (Max)",
+      "grid": false,
+      "titleColor": "orange"
+    },
+    {
+      "orient": "right",
+      "scale": "yscale3",
+      "title": "Destination (Mean)",
+      "offset": 60,
+      "grid": false,
+      "titleColor": "purple"
     }
   ],
 
@@ -209,12 +215,8 @@
                 "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
               }
             },
-            "update": {
-              "strokeWidth": { "value": 1 }
-            },
-            "hover": {
-              "strokeWidth": { "value": 2 }
-            }
+            "update": { "strokeWidth": { "value": 1 } },
+            "hover": { "strokeWidth": { "value": 2 } }
           }
         },
         {
@@ -231,69 +233,49 @@
                 "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
               }
             },
-            "update": {
-              "size": { "value": 30 }
-            },
-            "hover": {
-              "size": { "value": 50 }
-            }
+            "update": { "size": { "value": 30 } },
+            "hover": { "size": { "value": 50 } }
           }
         }
       ]
     },
+
     {
-      "type": "group",
-      "from": {
-        "facet": {
-          "name": "series",
-          "data": "destinationData"
-        }
-      },
-      "marks": [
-        {
-          "type": "line",
-          "from": { "data": "series" },
-          "encode": {
-            "enter": {
-              "x": { "scale": "xscale", "field": "DateParsedAgg" },
-              "y": { "scale": "yscale3", "field": "DestinationValue" },
-              "strokeWidth": { "value": 1 },
-              "tooltip": {
-                "signal": "{'Date': datum['DateDay'], Destination: format(datum['DestinationValue'], '.2f')}"
-              }
-            },
-            "update": {
-              "strokeWidth": { "value": 1 }
-            },
-            "hover": {
-              "strokeWidth": { "value": 2 }
-            }
+      "type": "line",
+      "from": { "data": "destinationData" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "DateParsedAgg" },
+          "y": { "scale": "yscale3", "field": "DestinationValue" },
+          "stroke": { "value": "purple" },
+          "strokeWidth": { "value": 2 },
+          "tooltip": {
+            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
           }
         },
-        {
-          "type": "symbol",
-          "from": { "data": "series" },
-          "encode": {
-            "enter": {
-              "x": { "scale": "xscale", "field": "DateParsedAgg" },
-              "y": { "scale": "yscale3", "field": "DestinationValue" },
-              "fill": { "scale": "color", "field": "Drillhole_USC" },
-              "size": { "value": 30 },
-              "opacity": { "value": 0.7 },
-              "tooltip": {
-                "signal": "{'Date': datum['DateDay'], Destination: format(datum['DestinationValue'], '.2f')}"
-              }
-            },
-            "update": {
-              "size": { "value": 30 }
-            },
-            "hover": {
-              "size": { "value": 50 }
-            }
-          }
-        }
-      ]
+        "update": { "strokeWidth": { "value": 2 } },
+        "hover": { "strokeWidth": { "value": 3 } }
+      }
     },
+    {
+      "type": "symbol",
+      "from": { "data": "destinationData" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "DateParsedAgg" },
+          "y": { "scale": "yscale3", "field": "DestinationValue" },
+          "fill": { "value": "purple" },
+          "size": { "value": 30 },
+          "opacity": { "value": 0.6 },
+          "tooltip": {
+            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
+          }
+        },
+        "update": { "size": { "value": 30 } },
+        "hover": { "size": { "value": 50 } }
+      }
+    },
+
     {
       "type": "line",
       "from": { "data": "tailingsData" },
@@ -308,21 +290,18 @@
             "signal": "{'Date': datum['DateDay'], 'Tailings (Max)': format(datum['TailingsValue'], '.2f')}"
           }
         },
-        "update": {
-          "strokeWidth": { "value": 2 }
-        },
-        "hover": {
-          "strokeWidth": { "value": 3 }
-        }
+        "update": { "strokeWidth": { "value": 2 } },
+        "hover": { "strokeWidth": { "value": 3 } }
       }
     },
+
     {
       "type": "text",
       "from": { "data": "tailingsLabel" },
       "encode": {
         "enter": {
-          "x": { "scale": "xscale", "field": "DateParsedAgg" },
-          "y": { "scale": "yscale2", "field": "TailingsValue", "offset": 3 },
+          "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": 6 },
+          "y": { "scale": "yscale2", "field": "TailingsValue", "offset": -6 },
           "text": { "value": "Tailings" },
           "fill": { "value": "orange" },
           "fontSize": { "value": 12 },
