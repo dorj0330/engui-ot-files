@@ -1,11 +1,16 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "Average Total Head by Drillhole over time, with Destination (mean) thin bars and Tailings (max) overlay (single shared y-scale)",
+  "description": "Average Total Head by Drillhole over time, with Destination (mean) thin bars visually scaled and Tailings (max) overlay (single shared y-scale)",
   "padding": 5,
   "autosize": { "type": "fit", "resize": true, "contains": "padding" },
 
   "signals": [
-    { "name": "legendColumns", "update": "max(1, floor(width / 95))" }
+    { "name": "legendColumns", "update": "max(1, floor(width / 95))" },
+
+    {
+      "name": "destScale",
+      "value": 40
+    }
   ],
 
   "data": [
@@ -56,7 +61,8 @@
           "ops": ["mean"],
           "as": ["DestinationValue"]
         },
-        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" }
+        { "type": "formula", "expr": "toDate(datum['DateDay'])", "as": "DateParsedAgg" },
+        { "type": "formula", "expr": "datum.DestinationValue * destScale", "as": "DestinationScaled" }
       ]
     },
 
@@ -105,7 +111,7 @@
       "domain": {
         "fields": [
           { "data": "aggregated", "field": "AvgTotalHead" },
-          { "data": "destinationData", "field": "DestinationValue" },
+          { "data": "destinationData", "field": "DestinationScaled" },
           { "data": "tailingsData", "field": "TailingsValue" }
         ]
       },
@@ -136,7 +142,7 @@
     {
       "orient": "left",
       "scale": "yscale",
-      "title": "Value",
+      "title": { "signal": "'Value (Destination shown ×' + destScale + ')'" },
       "grid": true
     }
   ],
@@ -162,12 +168,15 @@
         "enter": {
           "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": -1 },
           "width": { "value": 2 },
-          "y": { "scale": "yscale", "field": "DestinationValue" },
+
+          "y": { "scale": "yscale", "field": "DestinationScaled" },
           "y2": { "scale": "yscale", "value": 0 },
+
           "fill": { "value": "purple" },
           "opacity": { "value": 0.45 },
+
           "tooltip": {
-            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
+            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f'), 'Shown as (×destScale)': format(datum['DestinationScaled'], '.2f'), 'Multiplier': destScale}"
           }
         },
         "hover": { "opacity": { "value": 0.85 } }
