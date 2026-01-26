@@ -1,6 +1,6 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "Average Total Head by Drillhole over time, with Destination (mean) and Tailings (max) overlays",
+  "description": "Average Total Head by Drillhole over time, with Destination (mean) thin bars and Tailings (max) overlay (single shared y-scale)",
   "padding": 5,
   "autosize": { "type": "fit", "resize": true, "contains": "padding" },
 
@@ -32,10 +32,7 @@
       "name": "aggregated",
       "source": "filtered",
       "transform": [
-        {
-          "type": "filter",
-          "expr": "isValid(datum.TotalHeadNum)"
-        },
+        { "type": "filter", "expr": "isValid(datum.TotalHeadNum)" },
         {
           "type": "aggregate",
           "groupby": ["DateDay", "Drillhole_USC"],
@@ -51,10 +48,7 @@
       "name": "destinationData",
       "source": "filtered",
       "transform": [
-        {
-          "type": "filter",
-          "expr": "isValid(datum.DestinationNum)"
-        },
+        { "type": "filter", "expr": "isValid(datum.DestinationNum)" },
         {
           "type": "aggregate",
           "groupby": ["DateDay"],
@@ -70,10 +64,7 @@
       "name": "tailingsData",
       "source": "filtered",
       "transform": [
-        {
-          "type": "filter",
-          "expr": "isValid(datum.TailingsNum)"
-        },
+        { "type": "filter", "expr": "isValid(datum.TailingsNum)" },
         {
           "type": "aggregate",
           "groupby": ["DateDay"],
@@ -111,25 +102,13 @@
     {
       "name": "yscale",
       "type": "linear",
-      "domain": { "data": "aggregated", "field": "AvgTotalHead" },
-      "range": "height",
-      "nice": true,
-      "zero": false
-    },
-
-    {
-      "name": "yscale3",
-      "type": "linear",
-      "domain": { "data": "destinationData", "field": "DestinationValue" },
-      "range": "height",
-      "nice": true,
-      "zero": false
-    },
-
-    {
-      "name": "yscale2",
-      "type": "linear",
-      "domain": { "data": "tailingsData", "field": "TailingsValue" },
+      "domain": {
+        "fields": [
+          { "data": "aggregated", "field": "AvgTotalHead" },
+          { "data": "destinationData", "field": "DestinationValue" },
+          { "data": "tailingsData", "field": "TailingsValue" }
+        ]
+      },
       "range": "height",
       "nice": true,
       "zero": false
@@ -157,24 +136,8 @@
     {
       "orient": "left",
       "scale": "yscale",
-      "title": "Average Total Head",
-      "grid": true,
-      "titleColor": "steelblue"
-    },
-    {
-      "orient": "right",
-      "scale": "yscale2",
-      "title": "Tailings (Max)",
-      "grid": false,
-      "titleColor": "orange"
-    },
-    {
-      "orient": "right",
-      "scale": "yscale3",
-      "title": "Destination (Mean)",
-      "offset": 60,
-      "grid": false,
-      "titleColor": "purple"
+      "title": "Value",
+      "grid": true
     }
   ],
 
@@ -192,6 +155,25 @@
   ],
 
   "marks": [
+    {
+      "type": "rect",
+      "from": { "data": "destinationData" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": -1 },
+          "width": { "value": 2 },
+          "y": { "scale": "yscale", "field": "DestinationValue" },
+          "y2": { "scale": "yscale", "value": 0 },
+          "fill": { "value": "purple" },
+          "opacity": { "value": 0.45 },
+          "tooltip": {
+            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
+          }
+        },
+        "hover": { "opacity": { "value": 0.85 } }
+      }
+    },
+
     {
       "type": "group",
       "from": {
@@ -242,47 +224,11 @@
 
     {
       "type": "line",
-      "from": { "data": "destinationData" },
-      "encode": {
-        "enter": {
-          "x": { "scale": "xscale", "field": "DateParsedAgg" },
-          "y": { "scale": "yscale3", "field": "DestinationValue" },
-          "stroke": { "value": "purple" },
-          "strokeWidth": { "value": 2 },
-          "tooltip": {
-            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
-          }
-        },
-        "update": { "strokeWidth": { "value": 2 } },
-        "hover": { "strokeWidth": { "value": 3 } }
-      }
-    },
-    {
-      "type": "symbol",
-      "from": { "data": "destinationData" },
-      "encode": {
-        "enter": {
-          "x": { "scale": "xscale", "field": "DateParsedAgg" },
-          "y": { "scale": "yscale3", "field": "DestinationValue" },
-          "fill": { "value": "purple" },
-          "size": { "value": 30 },
-          "opacity": { "value": 0.6 },
-          "tooltip": {
-            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
-          }
-        },
-        "update": { "size": { "value": 30 } },
-        "hover": { "size": { "value": 50 } }
-      }
-    },
-
-    {
-      "type": "line",
       "from": { "data": "tailingsData" },
       "encode": {
         "enter": {
           "x": { "scale": "xscale", "field": "DateParsedAgg" },
-          "y": { "scale": "yscale2", "field": "TailingsValue" },
+          "y": { "scale": "yscale", "field": "TailingsValue" },
           "stroke": { "value": "orange" },
           "strokeWidth": { "value": 2 },
           "strokeDash": { "value": [5, 5] },
@@ -301,7 +247,7 @@
       "encode": {
         "enter": {
           "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": 6 },
-          "y": { "scale": "yscale2", "field": "TailingsValue", "offset": -6 },
+          "y": { "scale": "yscale", "field": "TailingsValue", "offset": -6 },
           "text": { "value": "Tailings" },
           "fill": { "value": "orange" },
           "fontSize": { "value": 12 },
