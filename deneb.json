@@ -162,14 +162,18 @@
         "enter": {
           "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": -1 },
           "width": { "value": 2 },
+
           "y": { "scale": "yscale", "field": "DestinationValue" },
-          "y2": { "scale": "yscale", "value": 1 },
+          "y2": { "signal": "height" },
+
           "fill": { "value": "purple" },
-          "opacity": { "value": 0.6 },
+          "opacity": { "value": 0.55 },
+
           "tooltip": {
-            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': datum['DestinationValue']}"
+            "signal": "{'Date': datum['DateDay'], 'Destination (Mean)': format(datum['DestinationValue'], '.2f')}"
           }
-        }
+        },
+        "hover": { "opacity": { "value": 0.85 } }
       }
     },
 
@@ -191,8 +195,27 @@
               "x": { "scale": "xscale", "field": "DateParsedAgg" },
               "y": { "scale": "yscale", "field": "AvgTotalHead" },
               "stroke": { "scale": "color", "field": "Drillhole_USC" },
-              "strokeWidth": { "value": 1 }
-            }
+              "strokeOpacity": { "value": 0.8 },
+              "strokeWidth": { "value": 1.5 },
+              "tooltip": {
+                "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
+              }
+            },
+            "hover": { "strokeWidth": { "value": 3 } }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "xscale", "field": "DateParsedAgg" },
+              "y": { "scale": "yscale", "field": "AvgTotalHead" },
+              "fill": { "scale": "color", "field": "Drillhole_USC" },
+              "size": { "value": 35 },
+              "opacity": { "value": 0.85 }
+            },
+            "hover": { "size": { "value": 70 } }
           }
         }
       ]
@@ -207,8 +230,12 @@
           "y": { "scale": "yscale", "field": "TailingsValue" },
           "stroke": { "value": "orange" },
           "strokeWidth": { "value": 2 },
-          "strokeDash": { "value": [5, 5] }
-        }
+          "strokeDash": { "value": [5, 5] },
+          "tooltip": {
+            "signal": "{'Date': datum['DateDay'], 'Tailings (Max)': format(datum['TailingsValue'], '.2f')}"
+          }
+        },
+        "hover": { "strokeWidth": { "value": 3 } }
       }
     },
 
