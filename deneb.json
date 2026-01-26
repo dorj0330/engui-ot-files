@@ -1,0 +1,253 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Average Total Head and Tailings by Drillhole over time",
+  "padding": 5,
+  "autosize": { "type": "fit", "resize": true, "contains": "padding" },
+
+  "data": [
+    {
+      "name": "dataset"
+    },
+    {
+      "name": "filtered",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "datum['Date_New'] != null && datum['Drillhole_USC'] != null"
+        },
+        {
+          "type": "formula",
+          "expr": "toDate(datum['Date_New'])",
+          "as": "DateParsed"
+        },
+        {
+          "type": "formula",
+          "expr": "timeFormat(datum['DateParsed'], '%Y-%m-%d')",
+          "as": "DateDay"
+        }
+      ]
+    },
+    {
+      "name": "aggregated",
+      "source": "filtered",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["DateDay", "Drillhole_USC"],
+          "fields": ["Total Head"],
+          "ops": ["mean"],
+          "as": ["AvgTotalHead"]
+        },
+        {
+          "type": "formula",
+          "expr": "toDate(datum['DateDay'])",
+          "as": "DateParsedAgg"
+        }
+      ]
+    },
+    {
+      "name": "tailingsData",
+      "source": "filtered",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["DateDay"],
+          "fields": ["Tailings"],
+          "ops": ["max"],
+          "as": ["TailingsValue"]
+        },
+        {
+          "type": "formula",
+          "expr": "toDate(datum['DateDay'])",
+          "as": "DateParsedAgg"
+        }
+      ]
+    },
+    {
+      "name": "tailingsLabel",
+      "source": "tailingsData",
+      "transform": [
+        {
+          "type": "aggregate",
+          "fields": ["DateParsedAgg"],
+          "ops": ["max"],
+          "as": ["MaxDate"]
+        },
+        {
+          "type": "lookup",
+          "from": "tailingsData",
+          "key": "DateParsedAgg",
+          "fields": ["MaxDate"],
+          "values": ["TailingsValue", "DateParsedAgg"]
+        }
+      ]
+    }
+  ],
+
+  "scales": [
+    {
+      "name": "xscale",
+      "type": "time",
+      "domain": {
+        "data": "aggregated",
+        "field": "DateParsedAgg"
+      },
+      "range": "width"
+    },
+    {
+      "name": "yscale",
+      "type": "linear",
+      "domain": { "data": "aggregated", "field": "AvgTotalHead" },
+      "range": "height",
+      "nice": true,
+      "zero": false
+    },
+    {
+      "name": "yscale2",
+      "type": "linear",
+      "domain": { "data": "tailingsData", "field": "TailingsValue" },
+      "range": "height",
+      "nice": true,
+      "zero": false
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": { "data": "aggregated", "field": "Drillhole_USC" },
+      "range": "category"
+    }
+  ],
+
+  "axes": [
+    {
+      "orient": "bottom",
+      "scale": "xscale",
+      "title": "Date",
+      "format": "%Y-%m-%d",
+      "tickCount": 5,
+      "grid": true,
+      "labelPadding": 12,
+      "labelAngle": -30
+    },
+    {
+      "orient": "left",
+      "scale": "yscale",
+      "title": "Average Total Head",
+      "grid": true,
+      "titleColor": "steelblue"
+    }
+  ],
+
+  "legends": [
+    {
+      "stroke": "color",
+      "title": "Drillhole",
+      "orient": "top",
+      "symbolSize": 100,
+      "symbolType": "stroke",
+      "offset": 0,
+      "direction": "horizontal"
+    }
+  ],
+
+  "marks": [
+    {
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "series",
+          "data": "aggregated",
+          "groupby": "Drillhole_USC"
+        }
+      },
+      "marks": [
+        {
+          "type": "line",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "xscale", "field": "DateParsedAgg" },
+              "y": { "scale": "yscale", "field": "AvgTotalHead" },
+              "stroke": { "scale": "color", "field": "Drillhole_USC" },
+              "strokeWidth": { "value": 1 },
+              "tooltip": {
+                "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
+              }
+            },
+            "update": {
+              "strokeWidth": { "value": 1 }
+            },
+            "hover": {
+              "strokeWidth": { "value": 2 }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "xscale", "field": "DateParsedAgg" },
+              "y": { "scale": "yscale", "field": "AvgTotalHead" },
+              "fill": { "scale": "color", "field": "Drillhole_USC" },
+              "size": { "value": 30 },
+              "opacity": { "value": 0.7 },
+              "tooltip": {
+                "signal": "{'Date': datum['DateDay'], 'Drillhole': datum['Drillhole_USC'], 'Avg Total Head': format(datum['AvgTotalHead'], '.2f')}"
+              }
+            },
+            "update": {
+              "size": { "value": 30 }
+            },
+            "hover": {
+              "size": { "value": 50 }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "line",
+      "from": { "data": "tailingsData" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "DateParsedAgg" },
+          "y": { "scale": "yscale2", "field": "TailingsValue" },
+          "stroke": { "value": "orange" },
+          "strokeWidth": { "value": 2 },
+          "strokeDash": { "value": [5, 5] },
+          "tooltip": {
+            "signal": "{'Date': datum['DateDay'], 'Tailings (Max)': format(datum['TailingsValue'], '.2f')}"
+          }
+        },
+        "update": {
+          "strokeWidth": { "value": 2 }
+        },
+        "hover": {
+          "strokeWidth": { "value": 3 }
+        }
+      }
+    },
+    {
+      "type": "text",
+      "from": { "data": "tailingsLabel" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "DateParsedAgg" },
+          "y": { "scale": "yscale2", "field": "TailingsValue", "offset": 3 },
+          "text": { "value": "Tailings" },
+          "fill": { "value": "orange" },
+          "fontSize": { "value": 12 },
+          "fontWeight": { "value": "bold" },
+          "align": { "value": "left" }
+        }
+      }
+    }
+  ],
+
+  "title": {
+    "text": "WL - Average Total Head & Tailings",
+    "fontSize": 16
+  }
+}
