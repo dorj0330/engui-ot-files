@@ -2,13 +2,15 @@
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "width": 800,
   "height": 400,
-  "padding": 5,
+  "padding": 30,
 
   "data": [
     {
       "name": "dataset",
       "transform": [
-        { "type": "formula", "as": "DateParsed", "expr": "toDate(datum['DateOnly'])" }
+        { "type": "formula", "as": "DateParsed", "expr": "toDate(datum['DateOnly'])" },
+        { "type": "formula", "as": "HeadNum", "expr": "toNumber(datum['Sum of Avg_Total_Head'])" },
+        { "type": "formula", "as": "PrecipNum", "expr": "toNumber(datum['Sum of Precip_total'])" }
       ]
     }
   ],
@@ -16,11 +18,14 @@
   "signals": [
     { "name": "split", "value": 0.70 },
 
-    { "name": "headExtent", "update": "extent(data('dataset'), 'Sum of Avg_Total_Head')" },
-    { "name": "headMinRounded", "update": "floor(headExtent[0] / 10) * 10" },
-    { "name": "headMaxRounded", "update": "ceil(headExtent[1] / 10) * 10" },
+    { "name": "headExtent", "update": "extent(data('dataset'), 'HeadNum')" },
+    { "name": "headMin", "update": "headExtent[0]" },
+    { "name": "headMax", "update": "headExtent[1]" },
 
-    { "name": "precipExtent", "update": "extent(data('dataset'), 'Sum of Precip_total')" },
+    { "name": "headMinRounded", "update": "floor(headMin/10)*10" },
+    { "name": "headMaxRounded", "update": "ceil(headMax/10)*10" },
+
+    { "name": "precipExtent", "update": "extent(data('dataset'), 'PrecipNum')" },
     { "name": "precipMax", "update": "max(0, precipExtent[1])" }
   ],
 
@@ -66,14 +71,16 @@
       "scale": "yscaleHead",
       "title": "Total Head (Avg)",
       "format": ".0f",
-      "grid": true
+      "grid": true,
+      "tickCount": 6
     },
 
     {
       "orient": "right",
       "scale": "yscalePrecip",
       "title": "Precipitation (mm)",
-      "grid": false
+      "grid": false,
+      "tickCount": 5
     }
   ],
 
@@ -85,7 +92,7 @@
         "enter": {
           "x": { "scale": "xscale", "field": "DateParsed", "offset": -2 },
           "width": { "value": 4 },
-          "y": { "scale": "yscalePrecip", "field": "Sum of Precip_total" },
+          "y": { "scale": "yscalePrecip", "field": "PrecipNum" },
           "y2": { "signal": "height" },
           "fill": { "value": "#ff7f0e" },
           "opacity": { "value": 0.35 }
@@ -109,7 +116,7 @@
           "encode": {
             "enter": {
               "x": { "scale": "xscale", "field": "DateParsed" },
-              "y": { "scale": "yscaleHead", "field": "Sum of Avg_Total_Head" },
+              "y": { "scale": "yscaleHead", "field": "HeadNum" },
               "stroke": { "scale": "color", "field": "Drillhole_USC" },
               "strokeWidth": { "value": 2 }
             }
