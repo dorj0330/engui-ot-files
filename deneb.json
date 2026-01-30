@@ -1,87 +1,108 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-
-  "autosize": {
-    "type": "fit",
-    "contains": "padding",
-    "resize": true
-  },
-
-  "width": "container",
-  "height": "container",
-  "padding": 30,
-
+  "autosize": { "type": "fit", "contains": "padding", "resize": true },
+  "padding": 5,
   "data": [
     {
       "name": "dataset",
       "transform": [
-        { "type": "formula", "as": "DateParsed", "expr": "toDate(datum['DateOnly'])" },
-        { "type": "formula", "as": "HeadNum", "expr": "toNumber(datum['Sum of Avg_Total_Head'])" }
+        {
+          "type": "formula",
+          "as": "Date",
+          "expr": "toDate(datum['Date'])"
+        }
       ]
     }
   ],
-
-  "signals": [
-    { "name": "headExtent", "update": "extent(data('dataset'), 'HeadNum')" },
-    { "name": "roundStep", "value": 10 },
-    { "name": "yMin", "update": "floor(headExtent[0] / roundStep) * roundStep" },
-    { "name": "yMax", "update": "ceil(headExtent[1] / roundStep) * roundStep" }
-  ],
-
   "scales": [
     {
       "name": "xscale",
       "type": "time",
-      "domain": { "data": "dataset", "field": "DateParsed" },
+      "domain": {
+        "data": "dataset",
+        "field": "Date"
+      },
       "range": "width"
     },
     {
       "name": "yscale",
       "type": "linear",
-      "domain": { "signal": "[yMin, yMax]" },
-      "range": "height",
-      "nice": false,
-      "zero": false
+      "domain": {
+        "data": "dataset",
+        "field": "Average of Total Head"
+      },
+      "nice": true,
+      "zero": false,
+      "range": "height"
     },
     {
       "name": "color",
       "type": "ordinal",
-      "domain": { "data": "dataset", "field": "Drillhole_USC" },
+      "domain": {
+        "data": "dataset",
+        "field": "Drillhole_USC",
+        "sort": true
+      },
       "range": "category"
     }
   ],
-
   "axes": [
-    { "orient": "bottom", "scale": "xscale", "title": "Date" },
+    {
+      "orient": "bottom",
+      "scale": "xscale",
+      "title": "Date",
+      "labelAngle": -45,
+      "labelAlign": "right"
+    },
     {
       "orient": "left",
       "scale": "yscale",
-      "title": "Total Head (Avg)",
-      "format": ".0f",
-      "grid": true,
-      "tickCount": 6
+      "title": "Total Head"
     }
   ],
-
+  "legends": [
+    {
+      "stroke": "color",
+      "title": "Drillhole USC",
+      "orient": "right"
+    }
+  ],
   "marks": [
     {
       "type": "group",
       "from": {
         "facet": {
-          "data": "dataset",
           "name": "series",
+          "data": "dataset",
           "groupby": "Drillhole_USC"
         }
       },
+      "encode": {
+        "update": {
+          "y": { "value": 0 },
+          "height": { "signal": "height * 0.7" }
+        }
+      },
+
+      "clip": true,
       "marks": [
         {
           "type": "line",
           "from": { "data": "series" },
+          "sort": { "field": "Date" },
           "encode": {
             "enter": {
-              "x": { "scale": "xscale", "field": "DateParsed" },
-              "y": { "scale": "yscale", "field": "HeadNum" },
-              "stroke": { "scale": "color", "field": "Drillhole_USC" },
+              "x": {
+                "scale": "xscale",
+                "field": "Date"
+              },
+              "y": {
+                "signal": "scale('yscale', datum['Average of Total Head']) * 0.7"
+              },
+              "stroke": {
+                "scale": "color",
+                "field": "Drillhole_USC"
+              },
               "strokeWidth": { "value": 2 }
             }
           }
