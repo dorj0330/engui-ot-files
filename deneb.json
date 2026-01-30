@@ -2,35 +2,39 @@
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
   "padding": 5,
+
   "data": [
     {
       "name": "dataset",
       "transform": [
-        {
-          "type": "formula",
-          "as": "Date",
-          "expr": "toDate(datum['Date'])"
-        }
+        { "type": "formula", "as": "Date", "expr": "toDate(datum['Date'])" }
       ]
     }
   ],
+
+  "signals": [
+    { "name": "yExtent", "update": "extent('dataset','Average of Total Head')" },
+    { "name": "yMin", "update": "yExtent[0]" },
+    { "name": "yMax", "update": "yExtent[1]" },
+
+    { "name": "topFrac", "value": 0.7 },
+    {
+      "name": "extraBelow",
+      "update": "(yMax - yMin) * ((1 - topFrac) / topFrac)"
+    }
+  ],
+
   "scales": [
     {
       "name": "xscale",
       "type": "time",
-      "domain": {
-        "data": "dataset",
-        "field": "Date"
-      },
+      "domain": { "data": "dataset", "field": "Date" },
       "range": "width"
     },
     {
       "name": "yscale",
       "type": "linear",
-      "domain": {
-        "data": "dataset",
-        "field": "Average of Total Head"
-      },
+      "domain": { "signal": "[yMin - extraBelow, yMax]" },
       "nice": true,
       "zero": false,
       "range": "height"
@@ -38,14 +42,11 @@
     {
       "name": "color",
       "type": "ordinal",
-      "domain": {
-        "data": "dataset",
-        "field": "Drillhole_USC",
-        "sort": true
-      },
+      "domain": { "data": "dataset", "field": "Drillhole_USC", "sort": true },
       "range": "category"
     }
   ],
+
   "axes": [
     {
       "orient": "bottom",
@@ -60,13 +61,11 @@
       "title": "Total Head"
     }
   ],
+
   "legends": [
-    {
-      "stroke": "color",
-      "title": "Drillhole USC",
-      "orient": "right"
-    }
+    { "stroke": "color", "title": "Drillhole USC", "orient": "right" }
   ],
+
   "marks": [
     {
       "type": "group",
@@ -77,13 +76,6 @@
           "groupby": "Drillhole_USC"
         }
       },
-      "encode": {
-        "update": {
-          "y": { "value": 0 },
-          "height": { "signal": "height * 0.7" }
-        }
-      },
-
       "clip": true,
       "marks": [
         {
@@ -92,17 +84,9 @@
           "sort": { "field": "Date" },
           "encode": {
             "enter": {
-              "x": {
-                "scale": "xscale",
-                "field": "Date"
-              },
-              "y": {
-                "signal": "scale('yscale', datum['Average of Total Head']) * 0.7"
-              },
-              "stroke": {
-                "scale": "color",
-                "field": "Drillhole_USC"
-              },
+              "x": { "scale": "xscale", "field": "Date" },
+              "y": { "scale": "yscale", "field": "Average of Total Head" },
+              "stroke": { "scale": "color", "field": "Drillhole_USC" },
               "strokeWidth": { "value": 2 }
             }
           }
