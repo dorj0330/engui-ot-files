@@ -3,69 +3,96 @@
   "width": 800,
   "height": 400,
   "padding": 5,
+
   "data": [
-    { "name": "dataset" }
-  ],
-  "signals": [
     {
-      "name": "headExtent",
-      "update": "extent('dataset','Sum of Avg_Total_Head')"
-    },
-    {
-      "name": "headMin",
-      "update": "floor(headExtent[0])"
-    },
-    {
-      "name": "headMax",
-      "update": "ceil(headExtent[1])"
-    },
-    {
-      "name": "precipExtent",
-      "update": "extent('dataset','Sum of Precip_tot')"
-    },
-    {
-      "name": "precipMax",
-      "update": "precipExtent[1]"
-    },
-    {
-      "name": "precipFactor",
-      "update": "(height * 0.3) / precipMax"
+      "name": "dataset",
+      "transform": [
+        { "type": "formula", "as": "DateParsed", "expr": "toDate(datum['DateOnly'])" }
+      ]
     }
   ],
+
+  "signals": [
+    { "name": "split", "value": 0.70 },
+
+    { "name": "headExtent", "update": "extent(data('dataset'), 'Sum of Avg_Total_Head')" },
+    { "name": "headMinRounded", "update": "floor(headExtent[0] / 10) * 10" },
+    { "name": "headMaxRounded", "update": "ceil(headExtent[1] / 10) * 10" },
+
+    { "name": "precipExtent", "update": "extent(data('dataset'), 'Sum of Precip_total')" },
+    { "name": "precipMax", "update": "max(0, precipExtent[1])" }
+  ],
+
   "scales": [
     {
       "name": "xscale",
       "type": "time",
-      "domain": {"data": "dataset", "field": "DateOnly"},
+      "domain": { "data": "dataset", "field": "DateParsed" },
       "range": "width"
     },
+
     {
       "name": "yscaleHead",
       "type": "linear",
-      "domain": {"signal": "[headMin, headMax]"},
-      "range": ["height", 0],
-      "nice": true
+      "domain": { "signal": "[headMinRounded, headMaxRounded]" },
+      "range": [{ "signal": "height * split" }, 0],
+      "nice": false,
+      "zero": false
     },
+
     {
       "name": "yscalePrecip",
       "type": "linear",
-      "domain": [0, {"signal": "precipMax"}],
-      "range": ["height", 0],
-      "nice": true
+      "domain": [0, { "signal": "precipMax" }],
+      "range": ["height", { "signal": "height * split" }],
+      "nice": true,
+      "zero": true
     },
+
     {
       "name": "color",
       "type": "ordinal",
-      "domain": {"data": "dataset", "field": "Drillhole_USC"},
+      "domain": { "data": "dataset", "field": "Drillhole_USC" },
       "range": "category"
     }
   ],
+
   "axes": [
-    {"orient": "bottom", "scale": "xscale", "title": "Date"},
-    {"orient": "left", "scale": "yscaleHead", "title": "Avg Total Head", "titleColor": "#1f77b4"},
-    {"orient": "right", "scale": "yscalePrecip", "title": "Precipitation (mm)", "titleColor": "#ff7f0e"}
+    { "orient": "bottom", "scale": "xscale", "title": "Date" },
+
+    {
+      "orient": "left",
+      "scale": "yscaleHead",
+      "title": "Total Head (Avg)",
+      "format": ".0f",
+      "grid": true
+    },
+
+    {
+      "orient": "right",
+      "scale": "yscalePrecip",
+      "title": "Precipitation (mm)",
+      "grid": false
+    }
   ],
+
   "marks": [
+    {
+      "type": "rect",
+      "from": { "data": "dataset" },
+      "encode": {
+        "enter": {
+          "x": { "scale": "xscale", "field": "DateParsed", "offset": -2 },
+          "width": { "value": 4 },
+          "y": { "scale": "yscalePrecip", "field": "Sum of Precip_total" },
+          "y2": { "signal": "height" },
+          "fill": { "value": "#ff7f0e" },
+          "opacity": { "value": 0.35 }
+        }
+      }
+    },
+
     {
       "type": "group",
       "from": {
@@ -78,31 +105,29 @@
       "marks": [
         {
           "type": "line",
-          "from": {"data": "drillhole"},
+          "from": { "data": "drillhole" },
           "encode": {
             "enter": {
-              "x": {"scale": "xscale", "field": "DateOnly"},
-              "y": {"scale": "yscaleHead", "field": "Sum of Avg_Total_Head"},
-              "stroke": {"scale": "color", "field": "Drillhole_USC"},
-              "strokeWidth": {"value": 2}
+              "x": { "scale": "xscale", "field": "DateParsed" },
+              "y": { "scale": "yscaleHead", "field": "Sum of Avg_Total_Head" },
+              "stroke": { "scale": "color", "field": "Drillhole_USC" },
+              "strokeWidth": { "value": 2 }
             }
           }
         }
       ]
     },
+
     {
-      "type": "rect",
-      "from": {"data": "dataset"},
+      "type": "rule",
       "encode": {
         "enter": {
-          "x": {"scale": "xscale", "field": "DateOnly"},
-          "x2": {"scale": "xscale", "field": "DateOnly", "offset": 5},
-          "y": {
-            "signal": "height - datum['Sum of Precip_tot'] * precipFactor"
-          },
-          "y2": {"signal": "height"},
-          "fill": {"value": "#ff7f0e"},
-          "opacity": {"value": 0.4}
+          "x": { "value": 0 },
+          "x2": { "signal": "width" },
+          "y": { "signal": "height * split" },
+          "stroke": { "value": "#999" },
+          "strokeWidth": { "value": 1 },
+          "opacity": { "value": 0.7 }
         }
       }
     }
