@@ -1,93 +1,70 @@
 {
-  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
   "padding": 5,
 
-  "data": [
+  "data": { "name": "dataset" },
+
+  "transform": [
+    { "calculate": "toDate(datum['Date'])", "as": "DateParsed" }
+  ],
+
+  "datasets": {
+    "extent": [
+      {}
+    ]
+  },
+
+  "vconcat": [
     {
-      "name": "dataset",
+      "data": { "name": "dataset" },
       "transform": [
-        { "type": "formula", "as": "Date", "expr": "toDate(datum['Date'])" }
-      ]
-    }
-  ],
-
-  "signals": [
-    { "name": "yExtent", "update": "extent('dataset','Average of Total Head')" },
-    { "name": "yMin", "update": "yExtent[0]" },
-    { "name": "yMax", "update": "yExtent[1]" },
-
-    { "name": "topFrac", "value": 0.7 },
-    {
-      "name": "extraBelow",
-      "update": "(yMax - yMin) * ((1 - topFrac) / topFrac)"
-    }
-  ],
-
-  "scales": [
-    {
-      "name": "xscale",
-      "type": "time",
-      "domain": { "data": "dataset", "field": "Date" },
-      "range": "width"
-    },
-    {
-      "name": "yscale",
-      "type": "linear",
-      "domain": { "signal": "[yMin - extraBelow, yMax]" },
-      "nice": true,
-      "zero": false,
-      "range": "height"
-    },
-    {
-      "name": "color",
-      "type": "ordinal",
-      "domain": { "data": "dataset", "field": "Drillhole_USC", "sort": true },
-      "range": "category"
-    }
-  ],
-
-  "axes": [
-    {
-      "orient": "bottom",
-      "scale": "xscale",
-      "title": "Date",
-      "labelAngle": -45,
-      "labelAlign": "right"
-    },
-    {
-      "orient": "left",
-      "scale": "yscale",
-      "title": "Total Head"
-    }
-  ],
-
-  "legends": [
-    { "stroke": "color", "title": "Drillhole USC", "orient": "right" }
-  ],
-
-  "marks": [
-    {
-      "type": "group",
-      "from": {
-        "facet": {
-          "name": "series",
-          "data": "dataset",
-          "groupby": "Drillhole_USC"
-        }
-      },
-      "clip": true,
-      "marks": [
+        { "calculate": "toDate(datum['Date'])", "as": "DateParsed" }
+      ],
+      "layer": [
         {
-          "type": "line",
-          "from": { "data": "series" },
-          "sort": { "field": "Date" },
-          "encode": {
-            "enter": {
-              "x": { "scale": "xscale", "field": "Date" },
-              "y": { "scale": "yscale", "field": "Average of Total Head" },
-              "stroke": { "scale": "color", "field": "Drillhole_USC" },
-              "strokeWidth": { "value": 2 }
+          "transform": [
+            {
+              "aggregate": [
+                { "op": "min", "field": "Average of Total Head", "as": "yMin" },
+                { "op": "max", "field": "Average of Total Head", "as": "yMax" }
+              ]
+            },
+            { "calculate": "0.7", "as": "topFrac" },
+            {
+              "calculate": "(datum.yMax - datum.yMin) * ((1 - datum.topFrac) / datum.topFrac)",
+              "as": "extraBelow"
+            },
+            { "calculate": "datum.yMin - datum.extraBelow", "as": "domainMin" }
+          ],
+          "mark": { "type": "point", "opacity": 0 },
+          "encoding": {
+            "x": { "value": 0 }
+          }
+        },
+        {
+          "mark": { "type": "line" },
+          "encoding": {
+            "x": {
+              "field": "DateParsed",
+              "type": "temporal",
+              "title": "Date",
+              "axis": { "labelAngle": -45, "labelAlign": "right" }
+            },
+            "y": {
+              "field": "Average of Total Head",
+              "type": "quantitative",
+              "title": "Total Head",
+              "scale": {
+                "zero": false,
+                "nice": true,
+                "domainMin": { "expr": "data('layer_0')[0].domainMin" }
+              }
+            },
+            "color": {
+              "field": "Drillhole_USC",
+              "type": "nominal",
+              "title": "Drillhole USC"
             }
           }
         }
