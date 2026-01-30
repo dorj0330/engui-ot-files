@@ -1,197 +1,110 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "WL - Average Total Head (zoomed), Destination (thin bars), Tailings (reference)",
+  "width": 800,
+  "height": 400,
   "padding": 5,
-  "autosize": { "type": "fit", "resize": true, "contains": "padding" },
-
-  "signals": [
-    { "name": "legendColumns", "update": "max(1, floor(width / 95))" },
-    { "name": "yZoomPadding", "value": 0.015 }
-  ],
-
   "data": [
-    { "name": "dataset" },
-
+    { "name": "dataset" }
+  ],
+  "signals": [
     {
-      "name": "filtered",
-      "source": "dataset",
-      "transform": [
-        { "type": "filter", "expr": "datum['Date_New'] && datum['Drillhole_USC']" },
-        { "type": "formula", "expr": "toDate(datum['Date_New'])", "as": "DateParsed" },
-        { "type": "formula", "expr": "timeFormat(datum['DateParsed'], '%Y-%m-%d')", "as": "DateDay" },
-        { "type": "formula", "expr": "toNumber(datum['Total Head'])", "as": "TotalHeadNum" },
-        { "type": "formula", "expr": "toNumber(datum['Destination'])", "as": "DestinationNum" },
-        { "type": "formula", "expr": "toNumber(datum['Tailings'])", "as": "TailingsNum" }
-      ]
+      "name": "headExtent",
+      "update": "extent('dataset','Sum of Avg_Total_Head')"
     },
-
     {
-      "name": "aggregated",
-      "source": "filtered",
-      "transform": [
-        {
-          "type": "aggregate",
-          "groupby": ["DateDay", "Drillhole_USC"],
-          "fields": ["TotalHeadNum"],
-          "ops": ["mean"],
-          "as": ["AvgTotalHead"]
-        },
-        { "type": "formula", "expr": "toDate(datum.DateDay)", "as": "DateParsedAgg" }
-      ]
+      "name": "headMin",
+      "update": "floor(headExtent[0])"
     },
-
     {
-      "name": "totalHeadStats",
-      "source": "aggregated",
-      "transform": [
-        {
-          "type": "aggregate",
-          "fields": ["AvgTotalHead", "AvgTotalHead"],
-          "ops": ["min", "max"],
-          "as": ["minTH", "maxTH"]
-        }
-      ]
+      "name": "headMax",
+      "update": "ceil(headExtent[1])"
     },
-
     {
-      "name": "destinationData",
-      "source": "filtered",
-      "transform": [
-        {
-          "type": "aggregate",
-          "groupby": ["DateDay"],
-          "fields": ["DestinationNum"],
-          "ops": ["mean"],
-          "as": ["DestinationValue"]
-        },
-        { "type": "formula", "expr": "toDate(datum.DateDay)", "as": "DateParsedAgg" }
-      ]
+      "name": "precipExtent",
+      "update": "extent('dataset','Sum of Precip_tot')"
     },
-
     {
-      "name": "tailingsData",
-      "source": "filtered",
-      "transform": [
-        {
-          "type": "aggregate",
-          "groupby": ["DateDay"],
-          "fields": ["TailingsNum"],
-          "ops": ["max"],
-          "as": ["TailingsValue"]
-        },
-        { "type": "formula", "expr": "toDate(datum.DateDay)", "as": "DateParsedAgg" }
-      ]
+      "name": "precipMax",
+      "update": "precipExtent[1]"
+    },
+    {
+      "name": "precipFactor",
+      "update": "(height * 0.3) / precipMax"
     }
   ],
-
   "scales": [
     {
       "name": "xscale",
       "type": "time",
-      "domain": { "data": "filtered", "field": "DateParsed" },
+      "domain": {"data": "dataset", "field": "DateOnly"},
       "range": "width"
     },
-
     {
-      "name": "yscale",
+      "name": "yscaleHead",
       "type": "linear",
-      "domain": [
-        { "signal": "data('totalHeadStats')[0].minTH * (1 - yZoomPadding)" },
-        { "signal": "data('totalHeadStats')[0].maxTH * (1 + yZoomPadding)" }
-      ],
-      "range": "height",
-      "nice": false,
-      "zero": false
+      "domain": {"signal": "[headMin, headMax]"},
+      "range": ["height", 0],
+      "nice": true
     },
-
+    {
+      "name": "yscalePrecip",
+      "type": "linear",
+      "domain": [0, {"signal": "precipMax"}],
+      "range": ["height", 0],
+      "nice": true
+    },
     {
       "name": "color",
       "type": "ordinal",
-      "domain": { "data": "aggregated", "field": "Drillhole_USC" },
+      "domain": {"data": "dataset", "field": "Drillhole_USC"},
       "range": "category"
     }
   ],
-
   "axes": [
-    {
-      "orient": "bottom",
-      "scale": "xscale",
-      "title": "Date",
-      "format": "%Y-%m-%d",
-      "labelAngle": -30,
-      "grid": true
-    },
-    {
-      "orient": "left",
-      "scale": "yscale",
-      "title": "Total Head (zoomed)",
-      "grid": true
-    }
+    {"orient": "bottom", "scale": "xscale", "title": "Date"},
+    {"orient": "left", "scale": "yscaleHead", "title": "Avg Total Head", "titleColor": "#1f77b4"},
+    {"orient": "right", "scale": "yscalePrecip", "title": "Precipitation (mm)", "titleColor": "#ff7f0e"}
   ],
-
-  "legends": [
-    {
-      "stroke": "color",
-      "title": "Drillhole",
-      "orient": "top",
-      "direction": "horizontal",
-      "columns": { "signal": "legendColumns" }
-    }
-  ],
-
   "marks": [
-    {
-      "type": "rect",
-      "from": { "data": "destinationData" },
-      "encode": {
-        "enter": {
-          "x": { "scale": "xscale", "field": "DateParsedAgg", "offset": -1 },
-          "width": { "value": 2 },
-          "y": { "scale": "yscale", "field": "DestinationValue" },
-          "y2": { "signal": "height" },
-          "fill": { "value": "purple" },
-          "opacity": { "value": 0.4 }
-        }
-      }
-    },
-
     {
       "type": "group",
       "from": {
         "facet": {
-          "data": "aggregated",
+          "data": "dataset",
+          "name": "drillhole",
           "groupby": "Drillhole_USC"
         }
       },
       "marks": [
         {
           "type": "line",
+          "from": {"data": "drillhole"},
           "encode": {
             "enter": {
-              "x": { "scale": "xscale", "field": "DateParsedAgg" },
-              "y": { "scale": "yscale", "field": "AvgTotalHead" },
-              "stroke": { "scale": "color", "field": "Drillhole_USC" },
-              "strokeWidth": { "value": 2 }
-            }
-          }
-        },
-        {
-          "type": "symbol",
-          "encode": {
-            "enter": {
-              "x": { "scale": "xscale", "field": "DateParsedAgg" },
-              "y": { "scale": "yscale", "field": "AvgTotalHead" },
-              "fill": { "scale": "color", "field": "Drillhole_USC" },
-              "size": { "value": 40 }
+              "x": {"scale": "xscale", "field": "DateOnly"},
+              "y": {"scale": "yscaleHead", "field": "Sum of Avg_Total_Head"},
+              "stroke": {"scale": "color", "field": "Drillhole_USC"},
+              "strokeWidth": {"value": 2}
             }
           }
         }
       ]
+    },
+    {
+      "type": "rect",
+      "from": {"data": "dataset"},
+      "encode": {
+        "enter": {
+          "x": {"scale": "xscale", "field": "DateOnly"},
+          "x2": {"scale": "xscale", "field": "DateOnly", "offset": 5},
+          "y": {
+            "signal": "height - datum['Sum of Precip_tot'] * precipFactor"
+          },
+          "y2": {"signal": "height"},
+          "fill": {"value": "#ff7f0e"},
+          "opacity": {"value": 0.4}
+        }
+      }
     }
-  ],
-
-  "title": {
-    "text": "WL - Average Total Head (Zoomed)",
-    "fontSize": 16
-  }
+  ]
 }
