@@ -6,69 +6,86 @@
   "data": { "name": "dataset" },
 
   "transform": [
-    { "calculate": "toDate(datum['Date'])", "as": "DateParsed" }
+    {
+      "calculate": "isString(datum['Date']) ? (isValid(timeParse(datum['Date'], '%Y-%m-%d %H:%M:%S')) ? timeParse(datum['Date'], '%Y-%m-%d %H:%M:%S') : toDate(replace(datum['Date'], ' ', 'T'))) : toDate(datum['Date'])",
+      "as": "DateParsed"
+    },
+    {
+      "calculate": "toNumber(datum['Average of Total Head'])",
+      "as": "TotalHead"
+    },
+    {
+      "filter": "isValid(datum.DateParsed) && isValid(datum.TotalHead)"
+    }
   ],
 
-  "datasets": {
-    "extent": [
-      {}
-    ]
-  },
-
-  "vconcat": [
+  "layer": [
     {
-      "data": { "name": "dataset" },
       "transform": [
-        { "calculate": "toDate(datum['Date'])", "as": "DateParsed" }
-      ],
-      "layer": [
         {
-          "transform": [
-            {
-              "aggregate": [
-                { "op": "min", "field": "Average of Total Head", "as": "yMin" },
-                { "op": "max", "field": "Average of Total Head", "as": "yMax" }
-              ]
-            },
-            { "calculate": "0.7", "as": "topFrac" },
-            {
-              "calculate": "(datum.yMax - datum.yMin) * ((1 - datum.topFrac) / datum.topFrac)",
-              "as": "extraBelow"
-            },
-            { "calculate": "datum.yMin - datum.extraBelow", "as": "domainMin" }
-          ],
-          "mark": { "type": "point", "opacity": 0 },
-          "encoding": {
-            "x": { "value": 0 }
-          }
+          "aggregate": [
+            { "op": "min", "field": "TotalHead", "as": "yMin" },
+            { "op": "max", "field": "TotalHead", "as": "yMax" },
+            { "op": "min", "field": "DateParsed", "as": "xMin" }
+          ]
         },
+        { "calculate": "0.3", "as": "padFrac" },
         {
-          "mark": { "type": "line" },
-          "encoding": {
-            "x": {
-              "field": "DateParsed",
-              "type": "temporal",
-              "title": "Date",
-              "axis": { "labelAngle": -45, "labelAlign": "right" }
-            },
-            "y": {
-              "field": "Average of Total Head",
-              "type": "quantitative",
-              "title": "Total Head",
-              "scale": {
-                "zero": false,
-                "nice": true,
-                "domainMin": { "expr": "data('layer_0')[0].domainMin" }
-              }
-            },
-            "color": {
-              "field": "Drillhole_USC",
-              "type": "nominal",
-              "title": "Drillhole USC"
-            }
-          }
-        }
-      ]
+          "calculate": "(datum.yMax - datum.yMin) * datum.padFrac",
+          "as": "yPad"
+        },
+        { "calculate": "datum.yMin - datum.yPad", "as": "domainMin" }
+      ],
+      "mark": { "type": "point", "opacity": 0 },
+      "encoding": {
+        "x": { "field": "xMin", "type": "temporal" },
+        "y": { "field": "domainMin", "type": "quantitative" }
+      }
+    },
+    {
+      "mark": {
+        "type": "line",
+        "point": { "filled": true, "size": 25 },
+        "strokeWidth": 2
+      },
+      "encoding": {
+        "x": {
+          "field": "DateParsed",
+          "type": "temporal",
+          "title": "Date",
+          "axis": { "labelAngle": -45, "labelAlign": "right" }
+        },
+        "y": {
+          "field": "TotalHead",
+          "type": "quantitative",
+          "title": "Total Head",
+          "scale": { "zero": false, "nice": true }
+        },
+        "color": {
+          "field": "Drillhole_USC",
+          "type": "nominal",
+          "title": "Drillhole USC"
+        },
+        "tooltip": [
+          { "field": "Date", "type": "nominal", "title": "Date (raw)" },
+          {
+            "field": "DateParsed",
+            "type": "temporal",
+            "title": "Date (parsed)"
+          },
+          {
+            "field": "Average of Total Head",
+            "type": "nominal",
+            "title": "Total Head (raw)"
+          },
+          {
+            "field": "TotalHead",
+            "type": "quantitative",
+            "title": "Total Head"
+          },
+          { "field": "Drillhole_USC", "type": "nominal", "title": "Drillhole" }
+        ]
+      }
     }
   ]
 }
