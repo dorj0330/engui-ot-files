@@ -45,7 +45,6 @@
     {
       "mark": {
         "type": "line",
-        "point": { "filled": true, "size": 25 },
         "strokeWidth": 2
       },
       "encoding": {
