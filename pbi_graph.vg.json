@@ -1,9 +1,6 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
-  "padding": { "left": 5, "top": 5, "right": 40, "bottom": 40 },
-  "width": 800,
-  "height": 350,
 
   "signals": [
     { "name": "rainMax", "value": 40 },
@@ -27,7 +24,6 @@
       ]
     },
 
-    /* --------- Power BI safety: stats can be empty on first render --------- */
     {
       "name": "yMinSafe",
       "update": "length(data('stats')) ? data('stats')[0].yMin : 0"
@@ -44,28 +40,29 @@
 
   "data": [
     {
-      "name": "raw",
-      "url": "https://raw.githubusercontent.com/dorj0330/engui-ot-files/refs/heads/main/data.csv",
-      "format": {
-        "type": "csv",
-        "parse": {
-          "Average of Total Head": "number",
-          "Average of Daily rainfall": "number"
-        }
-      },
+      "name": "dataset",
+
       "transform": [
         {
           "type": "formula",
           "as": "DateParsed",
-          "expr": "toDate(replace(datum['Date'], ' ', 'T'))"
+          "expr": "isString(datum['Date']) ? (isValid(timeParse(datum['Date'], '%Y-%m-%d %H:%M:%S')) ? timeParse(datum['Date'], '%Y-%m-%d %H:%M:%S') : (isValid(timeParse(datum['Date'], '%Y-%m-%dT%H:%M:%S')) ? timeParse(datum['Date'], '%Y-%m-%dT%H:%M:%S') : toDate(replace(datum['Date'], ' ', 'T')))) : toDate(datum['Date'])"
         },
         {
           "type": "formula",
           "as": "DateDay",
           "expr": "datetime(year(datum.DateParsed), month(datum.DateParsed), date(datum.DateParsed))"
         },
-        { "type": "formula", "as": "TotalHead", "expr": "datum['Average of Total Head']" },
-        { "type": "formula", "as": "Rainfall", "expr": "datum['Average of Daily rainfall']" },
+        {
+          "type": "formula",
+          "as": "TotalHead",
+          "expr": "datum['Average of Total Head']"
+        },
+        {
+          "type": "formula",
+          "as": "Rainfall",
+          "expr": "datum['Average of Daily rainfall']"
+        },
         {
           "type": "filter",
           "expr": "isValid(datum.DateDay) && isValid(datum.TotalHead) && datum.Drillhole_USC != null"
@@ -75,7 +72,7 @@
 
     {
       "name": "rainByDay",
-      "source": "raw",
+      "source": "dataset",
       "transform": [
         {
           "type": "aggregate",
@@ -94,7 +91,7 @@
 
     {
       "name": "headByDay",
-      "source": "raw",
+      "source": "dataset",
       "transform": [
         {
           "type": "aggregate",
@@ -165,7 +162,7 @@
     },
 
     {
-      "name": "endLabelsRaw",
+      "name": "endLabelsdataset",
       "source": "lastPoints",
       "transform": [
         { "type": "formula", "as": "xLabel", "expr": "width + 30" },
@@ -189,7 +186,7 @@
 
     {
       "name": "endLabels",
-      "source": "endLabelsRaw",
+      "source": "endLabelsdataset",
       "transform": [
         {
           "type": "formula",
@@ -221,7 +218,10 @@
       "name": "yRain",
       "type": "linear",
       "domain": [0, { "signal": "rainMax" }],
-      "range": [{ "signal": "height" }, { "signal": "scale('yHead', yMinSafe)" }]
+      "range": [
+        { "signal": "height" },
+        { "signal": "scale('yHead', yMinSafe)" }
+      ]
     },
 
     {
@@ -239,15 +239,33 @@
       "title": "Date",
       "labelAngle": -45,
       "labelAlign": "right",
-      "tickCount": 12
+      "tickCount": 12,
+      "format": "%Y-%m-%d",
+      "formatType": "time",
+      "labelOverlap": "parity",
+      "grid": true,
+      "gridColor": "#e6e6e6",
+      "gridOpacity": 1,
+      "gridWidth": 1
     },
-    { "orient": "left", "scale": "yHead", "title": "Total Head" },
+    {
+      "orient": "left",
+      "scale": "yHead",
+      "title": "Average Total Head",
+      "grid": true,
+      "gridColor": "#e6e6e6",
+      "gridOpacity": 1,
+      "gridWidth": 1
+    },
     {
       "orient": "right",
       "scale": "yRain",
-      "title": "Rainfall (0–40)",
-      "grid": false,
-      "tickCount": 10
+      "title": "Precip mm",
+      "tickCount": 5,
+ "grid": true,
+      "gridColor": "#4A9AFF",
+      "gridOpacity": 1,
+      "gridWidth": 1
     }
   ],
 
@@ -267,8 +285,9 @@
       "from": { "data": "rainByDay" },
       "encode": {
         "update": {
+          "fill": { "value": "#0073FF" },
           "x": { "scale": "x", "field": "DateDay" },
-          "width": { "value": 3 },
+          "width": { "value": 4 },
           "y": { "scale": "yRain", "field": "RainClamped" },
           "y2": { "scale": "yRain", "value": 0 },
           "tooltip": {
