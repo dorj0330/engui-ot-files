@@ -1,7 +1,7 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
-  "padding": 5,
+  "padding": { "left": 5, "top": 5, "right": 160, "bottom": 40 },
   "width": 800,
   "height": 350,
 
@@ -31,52 +31,17 @@
         }
       },
       "transform": [
-        {
-          "type": "formula",
-          "as": "DateParsed",
-          "expr": "toDate(replace(datum['Date'], ' ', 'T'))"
-        },
+        { "type": "formula", "as": "DateParsed", "expr": "toDate(replace(datum['Date'], ' ', 'T'))" },
         {
           "type": "formula",
           "as": "DateDay",
           "expr": "datetime(year(datum.DateParsed), month(datum.DateParsed), date(datum.DateParsed))"
         },
-        {
-          "type": "formula",
-          "as": "TotalHead",
-          "expr": "datum['Average of Total Head']"
-        },
-        {
-          "type": "formula",
-          "as": "Rainfall",
-          "expr": "datum['Average of Daily rainfall']"
-        },
+        { "type": "formula", "as": "TotalHead", "expr": "datum['Average of Total Head']" },
+        { "type": "formula", "as": "Rainfall", "expr": "datum['Average of Daily rainfall']" },
         {
           "type": "filter",
           "expr": "isValid(datum.DateDay) && isValid(datum.TotalHead) && datum.Drillhole_USC != null"
-        }
-      ]
-    },
-
-    {
-      "name": "stats",
-      "source": "raw",
-      "transform": [
-        {
-          "type": "aggregate",
-          "fields": ["TotalHead", "TotalHead"],
-          "ops": ["min", "max"],
-          "as": ["yMin", "yMax"]
-        },
-        {
-          "type": "formula",
-          "as": "yPad",
-          "expr": "(datum.yMax - datum.yMin) * padFrac"
-        },
-        {
-          "type": "formula",
-          "as": "domainMin",
-          "expr": "datum.yMin - datum.yPad"
         }
       ]
     },
@@ -92,22 +57,70 @@
           "ops": ["mean"],
           "as": ["RainDay"]
         },
+        { "type": "formula", "as": "RainClamped", "expr": "min(max(datum.RainDay, 0), rainMax)" }
+      ]
+    },
+
+    {
+      "name": "headByDay",
+      "source": "raw",
+      "transform": [
         {
-          "type": "formula",
-          "as": "RainClamped",
-          "expr": "min(max(datum.RainDay, 0), rainMax)"
+          "type": "aggregate",
+          "groupby": ["DateDay", "Drillhole_USC"],
+          "fields": ["TotalHead"],
+          "ops": ["mean"],
+          "as": ["TotalHeadDay"]
+        },
+        {
+          "type": "lookup",
+          "from": "rainByDay",
+          "key": "DateDay",
+          "fields": ["DateDay"],
+          "values": ["RainDay"],
+          "as": ["RainDay"]
+        },
+        { "type": "formula", "as": "RainDaySafe", "expr": "isValid(datum.RainDay) ? datum.RainDay : 0" },
+        {
+          "type": "collect",
+          "sort": { "field": ["Drillhole_USC", "DateDay"], "order": ["ascending", "ascending"] }
         }
+      ]
+    },
+
+    {
+      "name": "stats",
+      "source": "headByDay",
+      "transform": [
+        {
+          "type": "aggregate",
+          "fields": ["TotalHeadDay", "TotalHeadDay"],
+          "ops": ["min", "max"],
+          "as": ["yMin", "yMax"]
+        },
+        { "type": "formula", "as": "yPad", "expr": "(datum.yMax - datum.yMin) * padFrac" },
+        { "type": "formula", "as": "domainMin", "expr": "datum.yMin - datum.yPad" }
+      ]
+    },
+
+    {
+      "name": "lastPoints",
+      "source": "headByDay",
+      "transform": [
+        {
+          "type": "window",
+          "groupby": ["Drillhole_USC"],
+          "sort": { "field": "DateDay", "order": "descending" },
+          "ops": ["row_number"],
+          "as": ["rn"]
+        },
+        { "type": "filter", "expr": "datum.rn === 1" }
       ]
     }
   ],
 
   "scales": [
-    {
-      "name": "x",
-      "type": "time",
-      "domain": { "data": "raw", "field": "DateDay" },
-      "range": "width"
-    },
+    { "name": "x", "type": "time", "domain": { "data": "headByDay", "field": "DateDay" }, "range": "width" },
 
     {
       "name": "yHead",
@@ -125,36 +138,21 @@
       "name": "yRain",
       "type": "linear",
       "domain": [0, { "signal": "rainMax" }],
-      "range": [
-        { "signal": "height" },
-        { "signal": "scale('yHead', data('stats')[0].yMin)" }
-      ]
+      "range": [{ "signal": "height" }, { "signal": "scale('yHead', data('stats')[0].yMin)" }]
     },
 
     {
       "name": "color",
       "type": "ordinal",
-      "domain": { "data": "raw", "field": "Drillhole_USC" },
+      "domain": { "data": "headByDay", "field": "Drillhole_USC" },
       "range": { "scheme": "category10" }
     }
   ],
 
   "axes": [
-    {
-      "orient": "bottom",
-      "scale": "x",
-      "title": "Date",
-      "labelAngle": -45,
-      "labelAlign": "right"
-    },
+    { "orient": "bottom", "scale": "x", "title": "Date", "labelAngle": -45, "labelAlign": "right" },
     { "orient": "left", "scale": "yHead", "title": "Total Head" },
-    {
-      "orient": "right",
-      "scale": "yRain",
-      "title": "Rainfall (0–40)",
-      "grid": false,
-      "tickCount": 7
-    }
+    { "orient": "right", "scale": "yRain", "title": "Rainfall (0–40)", "grid": false, "tickCount": 7 }
   ],
 
   "legends": [
@@ -178,7 +176,7 @@
           "y": { "scale": "yRain", "field": "RainClamped" },
           "y2": { "scale": "yRain", "value": 0 },
           "tooltip": {
-            "signal": "{\"Date\": timeFormat(datum.DateDay, '%Y-%m-%d'), \"Rainfall\": format(datum.RainDay, '.2f')}"
+            "signal": "datum.RainDay > 0 ? { 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'Rainfall': format(datum.RainDay, '.2f') } : null"
           }
         }
       }
@@ -201,29 +199,17 @@
 
     {
       "type": "group",
-      "from": {
-        "facet": { "data": "raw", "name": "series", "groupby": "Drillhole_USC" }
-      },
+      "from": { "facet": { "data": "headByDay", "name": "series", "groupby": "Drillhole_USC" } },
       "marks": [
         {
           "type": "line",
-          "from": {
-            "data": "series",
-            "transform": [
-              {
-                "type": "collect",
-                "sort": { "field": "DateDay", "order": "ascending" }
-              }
-            ]
-          },
+          "from": { "data": "series" },
           "encode": {
             "update": {
               "x": { "scale": "x", "field": "DateDay" },
-              "y": { "scale": "yHead", "field": "TotalHead" },
+              "y": { "scale": "yHead", "field": "TotalHeadDay" },
               "stroke": { "scale": "color", "field": "Drillhole_USC" },
-              "strokeWidth": {
-                "signal": "hover && hover.Drillhole_USC === datum.Drillhole_USC ? 4 : 2"
-              }
+              "strokeWidth": { "signal": "hover && hover.Drillhole_USC === datum.Drillhole_USC ? 4 : 2" }
             }
           }
         },
@@ -231,37 +217,55 @@
         {
           "type": "symbol",
           "name": "pt",
-          "from": {
-            "data": "series",
-            "transform": [
-              {
-                "type": "collect",
-                "sort": { "field": "DateDay", "order": "ascending" }
-              }
-            ]
-          },
+          "from": { "data": "series" },
           "encode": {
             "update": {
               "x": { "scale": "x", "field": "DateDay" },
-              "y": { "scale": "yHead", "field": "TotalHead" },
+              "y": { "scale": "yHead", "field": "TotalHeadDay" },
               "fill": { "scale": "color", "field": "Drillhole_USC" },
-
               "size": { "value": 80 },
               "stroke": { "value": "white" },
-              "strokeWidth": {
-                "signal": "hover && (+hover.DateDay) === (+datum.DateDay) ? 2 : 0"
-              },
-
-              "opacity": {
-                "signal": "hover && (+hover.DateDay) === (+datum.DateDay) && hover.Drillhole_USC === datum.Drillhole_USC ? 1 : 0"
-              },
+              "strokeWidth": { "signal": "hover && (+hover.DateDay) === (+datum.DateDay) ? 2 : 0" },
+              "opacity": { "signal": "hover && (+hover.DateDay) === (+datum.DateDay) ? 1 : 0" },
               "tooltip": {
-                "signal": "{\"Drillhole\": datum.Drillhole_USC, \"Date\": timeFormat(datum.DateDay, '%Y-%m-%d'), \"Total Head\": format(datum.TotalHead, '.2f')}"
+                "signal": "datum.RainDaySafe > 0 ? { 'Drillhole': datum.Drillhole_USC, 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'Total Head': format(datum.TotalHeadDay, '.2f'), 'Rainfall': format(datum.RainDaySafe, '.2f') } : { 'Drillhole': datum.Drillhole_USC, 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'Total Head': format(datum.TotalHeadDay, '.2f') }"
               }
             }
           }
         }
       ]
+    },
+
+    {
+      "type": "rule",
+      "from": { "data": "lastPoints" },
+      "encode": {
+        "update": {
+          "x": { "scale": "x", "field": "DateDay" },
+          "x2": { "signal": "width + 10" },
+          "y": { "scale": "yHead", "field": "TotalHeadDay" },
+          "y2": { "scale": "yHead", "field": "TotalHeadDay" },
+          "stroke": { "scale": "color", "field": "Drillhole_USC" },
+          "opacity": { "value": 1 },
+          "strokeWidth": { "value": 1 }
+        }
+      }
+    },
+
+    {
+      "type": "text",
+      "from": { "data": "lastPoints" },
+      "encode": {
+        "update": {
+          "x": { "signal": "width + 14" },
+          "y": { "scale": "yHead", "field": "TotalHeadDay" },
+          "text": { "field": "Drillhole_USC" },
+          "align": { "value": "left" },
+          "baseline": { "value": "middle" },
+          "fill": { "scale": "color", "field": "Drillhole_USC" },
+          "opacity": { "value": 1 }
+        }
+      }
     }
   ]
 }
