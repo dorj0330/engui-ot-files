@@ -1,29 +1,22 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
-  "description": "Tailings over time, one line per chainage.",
+  "description": "Tailings over time, one line per chainage. X-axis locked to Date_Table date range.",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
 
   "signals": [
-    {
-      "name": "pad",
-      "value": {
-        "left": 0,
-        "top": 0,
-        "right": 30,
-        "bottom": 0
-      }
-    },
-
     { "name": "dateField", "value": "Date" },
     { "name": "yField", "value": "Tailings" },
     { "name": "chainage_seriesField", "value": "Chainage" },
+
     { "name": "labelPad", "value": 8 },
     { "name": "labelCollide", "value": 15 },
     { "name": "labelIters", "value": 6 },
+
     { "name": "endGap", "value": 30 },
     { "name": "labelOffset", "value": 60 },
     { "name": "labelX", "value": 70 },
     { "name": "labelLineGap", "value": 6 },
+
     {
       "name": "hover",
       "value": null,
@@ -34,17 +27,14 @@
     }
   ],
 
-  "padding": { "signal": "pad" },
-
   "data": [
     {
-      "name": "dataset",
-
+      "name": "raw",
       "transform": [
         {
           "type": "formula",
           "as": "date",
-          "expr": "isValid(timeParse(datum[dateField], '%Y-%m-%d %H:%M:%S')) ? timeParse(datum[dateField], '%Y-%m-%d %H:%M:%S') : toDate(datum[dateField])"
+          "expr": "isDate(datum[dateField]) ? datum[dateField] : (isValid(timeParse(datum[dateField], '%Y-%m-%d %H:%M:%S')) ? timeParse(datum[dateField], '%Y-%m-%d %H:%M:%S') : toDate(datum[dateField]))"
         },
         {
           "type": "formula",
@@ -55,7 +45,24 @@
           "type": "formula",
           "as": "chainage_series",
           "expr": "toString(datum[chainage_seriesField])"
-        },
+        }
+      ]
+    },
+
+    {
+      "name": "dates",
+      "source": "raw",
+      "transform": [
+        { "type": "filter", "expr": "isValid(datum.date)" },
+        { "type": "aggregate", "groupby": ["date"] },
+        { "type": "collect", "sort": { "field": "date" } }
+      ]
+    },
+
+    {
+      "name": "tailingsData",
+      "source": "raw",
+      "transform": [
         {
           "type": "filter",
           "expr": "isValid(datum.date) && isFinite(datum.tailingY) && datum.chainage_series != null && datum.chainage_series != ''"
@@ -63,9 +70,10 @@
         { "type": "collect", "sort": { "field": ["chainage_series", "date"] } }
       ]
     },
+
     {
       "name": "lastPoints",
-      "source": "dataset",
+      "source": "tailingsData",
       "transform": [
         {
           "type": "window",
@@ -77,6 +85,7 @@
         { "type": "filter", "expr": "datum.rn === 1" }
       ]
     },
+
     {
       "name": "endLabelsdataset",
       "source": "lastPoints",
@@ -98,6 +107,7 @@
         }
       ]
     },
+
     {
       "name": "endLabels",
       "source": "endLabelsdataset",
@@ -115,13 +125,13 @@
     {
       "name": "x",
       "type": "time",
-      "domain": { "data": "dataset", "field": "date" },
+      "domain": { "data": "dates", "field": "date" },
       "range": "width"
     },
     {
       "name": "y",
       "type": "linear",
-      "domain": { "data": "dataset", "field": "tailingY" },
+      "domain": { "data": "tailingsData", "field": "tailingY" },
       "range": "height",
       "nice": true,
       "zero": false
@@ -129,7 +139,7 @@
     {
       "name": "color",
       "type": "ordinal",
-      "domain": { "data": "dataset", "field": "chainage_series" },
+      "domain": { "data": "tailingsData", "field": "chainage_series" },
       "range": { "scheme": "category10" }
     }
   ],
@@ -177,7 +187,7 @@
       "from": {
         "facet": {
           "name": "chainage_series",
-          "data": "dataset",
+          "data": "tailingsData",
           "groupby": "chainage_series"
         }
       },
@@ -222,6 +232,7 @@
         }
       ]
     },
+
     {
       "type": "rule",
       "encode": {
@@ -239,13 +250,14 @@
         }
       }
     },
+
     {
       "type": "rule",
       "from": { "data": "endLabels" },
       "encode": {
         "update": {
           "x": { "scale": "x", "field": "date" },
-          "x2": { "signal": "width + labelX + labelOffset - labelLineGap" },
+          "x2": { "signal": "width + labelX - labelLineGap" },
           "y": { "field": "y0" },
           "y2": { "field": "yLabel" },
           "stroke": { "scale": "color", "field": "chainage_series" },
@@ -255,15 +267,16 @@
         }
       }
     },
+
     {
       "type": "text",
       "from": { "data": "endLabels" },
       "encode": {
         "update": {
-          "x": { "signal": "width + labelX + labelOffset" },
+          "x": { "signal": "width + labelX" },
           "y": { "field": "yLabel" },
           "text": { "field": "chainage_series" },
-          "align": { "value": "right" },
+          "align": { "value": "left" },
           "baseline": { "value": "middle" },
           "fill": { "scale": "color", "field": "chainage_series" },
           "opacity": { "value": 1 }
