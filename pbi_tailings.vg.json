@@ -1,72 +1,262 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "description": "Tailings over time, one line per chainage.",
-  "width": 600,
-  "height": 320,
-  "padding": 8,
-  "autosize": { "type": "fit", "contains": "padding" },
+  "autosize": { "type": "fit", "contains": "padding", "resize": true },
 
   "signals": [
     { "name": "dateField", "value": "Date" },
     { "name": "yField", "value": "Tailings" },
-    { "name": "seriesField", "value": "Chainage" }
+    { "name": "chainage_seriesField", "value": "Chainage" },
+    { "name": "labelPad", "value": 8 },
+    { "name": "labelCollide", "value": 15 },
+    { "name": "labelIters", "value": 6 },
+    { "name": "endGap", "value": 30 },
+    { "name": "labelOffset", "value": 60 },
+    { "name": "labelX", "value": 70 },
+    { "name": "labelLineGap", "value": 6 },
+    {
+      "name": "hover",
+      "value": null,
+      "on": [
+        { "events": "@pt:mousemove", "update": "datum" },
+        { "events": "view:mouseleave", "update": "null" }
+      ]
+    }
   ],
 
   "data": [
     {
       "name": "dataset",
 
-      
       "transform": [
         {
           "type": "formula",
-          "as": "__date",
+          "as": "date",
           "expr": "isValid(timeParse(datum[dateField], '%Y-%m-%d %H:%M:%S')) ? timeParse(datum[dateField], '%Y-%m-%d %H:%M:%S') : toDate(datum[dateField])"
         },
-        { "type": "formula", "as": "__y", "expr": "toNumber(datum[yField])" },
-        { "type": "formula", "as": "__series", "expr": "toString(datum[seriesField])" },
+        {
+          "type": "formula",
+          "as": "tailingY",
+          "expr": "toNumber(datum[yField])"
+        },
+        {
+          "type": "formula",
+          "as": "chainage_series",
+          "expr": "toString(datum[chainage_seriesField])"
+        },
         {
           "type": "filter",
-          "expr": "isValid(datum.__date) && isFinite(datum.__y) && datum.__series != null && datum.__series != ''"
+          "expr": "isValid(datum.date) && isFinite(datum.tailingY) && datum.chainage_series != null && datum.chainage_series != ''"
         },
-        { "type": "collect", "sort": { "field": ["__series", "__date"] } }
+        { "type": "collect", "sort": { "field": ["chainage_series", "date"] } }
+      ]
+    },
+    {
+      "name": "lastPoints",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "window",
+          "groupby": ["chainage_series"],
+          "sort": { "field": "date", "order": "descending" },
+          "ops": ["row_number"],
+          "as": ["rn"]
+        },
+        { "type": "filter", "expr": "datum.rn === 1" }
+      ]
+    },
+    {
+      "name": "endLabelsdataset",
+      "source": "lastPoints",
+      "transform": [
+        { "type": "formula", "as": "xLabel", "expr": "width + endGap" },
+        {
+          "type": "formula",
+          "as": "y0",
+          "expr": "isValid(datum.tailingY) ? scale('y', datum.tailingY) : (height/2)"
+        },
+        {
+          "type": "force",
+          "static": true,
+          "iterations": { "signal": "labelIters" },
+          "forces": [
+            { "force": "y", "y": { "field": "y0" }, "strength": 1 },
+            { "force": "collide", "radius": { "signal": "labelCollide" } }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "endLabels",
+      "source": "endLabelsdataset",
+      "transform": [
+        {
+          "type": "formula",
+          "as": "yLabel",
+          "expr": "min(max(datum.y, labelPad), height - labelPad)"
+        }
       ]
     }
   ],
 
   "scales": [
-    { "name": "x", "type": "time", "domain": { "data": "dataset", "field": "__date" }, "range": "width" },
-    { "name": "y", "type": "linear", "domain": { "data": "dataset", "field": "__y" }, "range": "height", "nice": true, "zero": false },
-    { "name": "color", "type": "ordinal", "domain": { "data": "dataset", "field": "__series" }, "range": { "scheme": "category10" } }
+    {
+      "name": "x",
+      "type": "time",
+      "domain": { "data": "dataset", "field": "date" },
+      "range": "width"
+    },
+    {
+      "name": "y",
+      "type": "linear",
+      "domain": { "data": "dataset", "field": "tailingY" },
+      "range": "height",
+      "nice": true,
+      "zero": false
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": { "data": "dataset", "field": "chainage_series" },
+      "range": { "scheme": "category10" }
+    }
   ],
 
   "axes": [
-    { "orient": "bottom", "scale": "x", "title": "Date" },
-    { "orient": "left", "scale": "y", "title": "Tailings" }
+    {
+      "orient": "bottom",
+      "scale": "x",
+      "title": "Date",
+      "labelAngle": -45,
+      "labelAlign": "right",
+      "tickCount": 12,
+      "format": "%Y-%m-%d",
+      "formatType": "time",
+      "labelOverlap": "parity",
+      "grid": true,
+      "gridColor": "#e6e6e6",
+      "gridOpacity": 1,
+      "gridWidth": 1
+    },
+    {
+      "orient": "left",
+      "scale": "y",
+      "title": "Tailings",
+      "grid": true,
+      "gridColor": "#e6e6e6",
+      "gridOpacity": 1,
+      "gridWidth": 1
+    }
   ],
 
   "legends": [
-    { "stroke": "color", "title": "Chainage", "orient": "right" }
+    {
+      "fill": "color",
+      "title": "Chainage",
+      "orient": "top",
+      "direction": "horizontal",
+      "symbolType": "circle"
+    }
   ],
 
   "marks": [
     {
       "type": "group",
-      "from": { "facet": { "name": "series", "data": "dataset", "groupby": "__series" } },
+      "from": {
+        "facet": {
+          "name": "chainage_series",
+          "data": "dataset",
+          "groupby": "chainage_series"
+        }
+      },
       "marks": [
         {
           "type": "line",
-          "from": { "data": "series" },
+          "from": { "data": "chainage_series" },
           "encode": {
             "enter": {
-              "x": { "scale": "x", "field": "__date" },
-              "y": { "scale": "y", "field": "__y" },
-              "stroke": { "scale": "color", "field": "__series" },
-              "strokeWidth": { "value": 2 }
+              "x": { "scale": "x", "field": "date" },
+              "y": { "scale": "y", "field": "tailingY" },
+              "stroke": { "scale": "color", "field": "chainage_series" },
+              "strokeWidth": {
+                "signal": "hover && hover.chainage_series === datum['chainage_series'] ? 4 : 2"
+              }
+            }
+          }
+        },
+
+        {
+          "type": "symbol",
+          "name": "pt",
+          "from": { "data": "chainage_series" },
+          "encode": {
+            "update": {
+              "x": { "scale": "x", "field": "date" },
+              "y": { "scale": "y", "field": "tailingY" },
+              "fill": { "scale": "color", "field": "chainage_series" },
+              "size": { "value": 36 },
+              "stroke": { "value": "white" },
+              "strokeWidth": {
+                "signal": "hover && (+hover.date) === (+datum.date) && hover.chainage_series === datum.chainage_series ? 2 : 0"
+              },
+              "opacity": {
+                "signal": "hover && (+hover.date) === (+datum.date) && hover.chainage_series === datum.chainage_series ? 1 : 0"
+              },
+              "tooltip": {
+                "signal": "{ 'Chainage': datum.chainage_series, 'Date': timeFormat(datum.date, '%Y-%m-%d %H:%M'), 'Tailings': format(datum.tailingY, '.2f') }"
+              }
             }
           }
         }
       ]
+    },
+    {
+      "type": "rule",
+      "encode": {
+        "update": {
+          "x": {
+            "scale": "x",
+            "signal": "hover && isValid(hover.date) ? hover.date : null"
+          },
+          "y": { "value": 0 },
+          "y2": { "signal": "height" },
+          "stroke": { "value": "#888" },
+          "strokeWidth": { "value": 1 },
+          "strokeDash": { "value": [4, 4] },
+          "opacity": { "signal": "hover ? 0.7 : 0" }
+        }
+      }
+    },
+    {
+      "type": "rule",
+      "from": { "data": "endLabels" },
+      "encode": {
+        "update": {
+          "x": { "scale": "x", "field": "date" },
+          "x2": { "signal": "width + labelX - labelLineGap" },
+          "y": { "field": "y0" },
+          "y2": { "field": "yLabel" },
+          "stroke": { "scale": "color", "field": "chainage_series" },
+          "opacity": { "value": 1 },
+          "strokeWidth": { "value": 1 },
+          "strokeDash": { "value": [3, 3] }
+        }
+      }
+    },
+    {
+      "type": "text",
+      "from": { "data": "endLabels" },
+      "encode": {
+        "update": {
+          "x": { "signal": "width + labelX" },
+          "y": { "field": "yLabel" },
+          "text": { "field": "chainage_series" },
+          "align": { "value": "left" },
+          "baseline": { "value": "middle" },
+          "fill": { "scale": "color", "field": "chainage_series" },
+          "opacity": { "value": 1 }
+        }
+      }
     }
   ]
 }
