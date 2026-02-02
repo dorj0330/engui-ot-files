@@ -1,0 +1,131 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "description": "Tailings over time, one line per chainage.",
+  "width": 600,
+  "height": 320,
+  "padding": 8,
+  "autosize": { "type": "fit", "contains": "padding" },
+  "signals": [
+    {
+      "name": "dateField",
+      "value": "Date"
+    },
+    {
+      "name": "yField",
+      "value": "Tailings"
+    },
+    {
+      "name": "seriesField",
+      "value": "Tailings Chainage"
+    }
+  ],
+  "data": [
+    {
+      "name": "dataset",
+      "transform": [
+        {
+          "type": "formula",
+          "as": "__date",
+          "expr": "toDate(datum[dateField])"
+        },
+        {
+          "type": "formula",
+          "as": "__y",
+          "expr": "toNumber(datum[yField])"
+        },
+        {
+          "type": "formula",
+          "as": "__series",
+          "expr": "datum[seriesField]"
+        },
+        {
+          "type": "filter",
+          "expr": "isValid(datum.__date) && isValid(datum.__y) && datum.__series != null"
+        },
+        {
+          "type": "collect",
+          "sort": {
+            "field": ["__series", "__date"],
+            "order": ["ascending", "ascending"]
+          }
+        }
+      ]
+    }
+  ],
+  "scales": [
+    {
+      "name": "x",
+      "type": "time",
+      "domain": { "data": "dataset", "field": "__date" },
+      "range": "width"
+    },
+    {
+      "name": "y",
+      "type": "linear",
+      "domain": { "data": "dataset", "field": "__y" },
+      "range": "height",
+      "nice": true,
+      "zero": false
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": { "data": "dataset", "field": "__series" },
+      "range": { "scheme": "category10" }
+    }
+  ],
+  "axes": [
+    { "orient": "bottom", "scale": "x", "title": "Date" },
+    { "orient": "left", "scale": "y", "title": { "signal": "yField" } }
+  ],
+  "legends": [
+    {
+      "fill": "color",
+      "title": { "signal": "seriesField" },
+      "orient": "right"
+    }
+  ],
+  "marks": [
+    {
+      "type": "group",
+      "from": {
+        "facet": {
+          "name": "series",
+          "data": "dataset",
+          "groupby": "__series"
+        }
+      },
+      "marks": [
+        {
+          "type": "line",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "x", "field": "__date" },
+              "y": { "scale": "y", "field": "__y" },
+              "stroke": { "scale": "color", "field": "__series" },
+              "strokeWidth": { "value": 2 }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "from": { "data": "series" },
+          "encode": {
+            "enter": {
+              "x": { "scale": "x", "field": "__date" },
+              "y": { "scale": "y", "field": "__y" },
+              "size": { "value": 20 },
+              "fill": { "scale": "color", "field": "__series" },
+              "opacity": { "value": 0 },
+              "tooltip": {
+                "signal": "{ 'Date': timeFormat(datum.__date, '%Y-%m-%d %H:%M'), 'Chainage': datum.__series, 'Tailings': datum.__y }"
+              }
+            },
+            "hover": { "opacity": { "value": 1 } }
+          }
+        }
+      ]
+    }
+  ]
+}

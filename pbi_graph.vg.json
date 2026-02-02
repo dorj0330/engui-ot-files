@@ -51,7 +51,7 @@
         {
           "type": "formula",
           "as": "DateDay",
-          "expr": "datetime(year(datum['Date']Parsed), month(datum['Date']Parsed), date(datum['Date']Parsed))"
+          "expr": "datetime(year(datum.DateParsed), month(datum.DateParsed), date(datum.DateParsed))"
         },
         {
           "type": "formula",
@@ -65,7 +65,7 @@
         },
         {
           "type": "filter",
-          "expr": "isValid(datum['Date']Day) && isValid(datum.TotalHead) && datum['Drillhole_USC'] != null"
+          "expr": "isValid(datum.DateDay) && isValid(datum.TotalHead) && datum.Drillhole_USC != null"
         }
       ]
     },
@@ -262,7 +262,7 @@
       "scale": "yRain",
       "title": "Precip mm",
       "tickCount": 5,
- "grid": true,
+      "grid": true,
       "gridColor": "#4A9AFF",
       "gridOpacity": 1,
       "gridWidth": 1
@@ -291,7 +291,7 @@
           "y": { "scale": "yRain", "field": "RainClamped" },
           "y2": { "scale": "yRain", "value": 0 },
           "tooltip": {
-            "signal": "datum.RainDay > 0 ? { 'Date': timeFormat(datum[\\'Date\\']Day, '%Y-%m-%d'), 'Rainfall': format(datum.RainDay, '.2f') } : null"
+            "signal": "datum.RainDay > 0 ? { 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'Rainfall': format(datum.RainDay, '.2f') } : null"
           }
         }
       }
@@ -349,13 +349,13 @@
               "size": { "value": 80 },
               "stroke": { "value": "white" },
               "strokeWidth": {
-                "signal": "hover && (+hover.DateDay) === (+datum['Date']Day)   ? 2 : 0"
+                "signal": "hover && (+hover.DateDay) === (+datum.DateDay) ? 2 : 0"
               },
               "opacity": {
-                "signal": "hover && (+hover.DateDay) === (+datum['Date']Day) && hover.Drillhole_USC === datum['Drillhole_USC'] ? 1 : 0"
+                "signal": "hover && (+hover.DateDay) === (+datum.DateDay) && hover.Drillhole_USC === datum['Drillhole_USC'] ? 1 : 0"
               },
               "tooltip": {
-                "signal": "datum.RainDaySafe > 0 ? { 'Drillhole': datum[\\'Drillhole_USC\\'], 'Date': timeFormat(datum[\\'Date\\']Day, '%Y-%m-%d'), 'Total Head': format(datum.TotalHeadDay, '.2f'), 'Rainfall': format(datum.RainDaySafe, '.2f') } : { 'Drillhole': datum[\\'Drillhole_USC\\'], 'Date': timeFormat(datum[\\'Date\\']Day, '%Y-%m-%d'), 'Total Head': format(datum.TotalHeadDay, '.2f') }"
+                "signal": "datum.RainDaySafe > 0 ? { 'Drillhole': datum.Drillhole_USC, 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'Total Head': format(datum.TotalHeadDay, '.2f'), 'Rainfall': format(datum.RainDaySafe, '.2f') } : { 'Drillhole': datum.Drillhole_USC, 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'Total Head': format(datum.TotalHeadDay, '.2f') }"
               }
             }
           }
