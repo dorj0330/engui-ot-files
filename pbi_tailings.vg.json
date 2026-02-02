@@ -4,6 +4,16 @@
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
 
   "signals": [
+    {
+      "name": "pad",
+      "value": {
+        "left": 0,
+        "top": 0,
+        "right": 30,
+        "bottom": 0
+      }
+    },
+
     { "name": "dateField", "value": "Date" },
     { "name": "yField", "value": "Tailings" },
     { "name": "chainage_seriesField", "value": "Chainage" },
@@ -23,6 +33,8 @@
       ]
     }
   ],
+
+  "padding": { "signal": "pad" },
 
   "data": [
     {
@@ -233,7 +245,7 @@
       "encode": {
         "update": {
           "x": { "scale": "x", "field": "date" },
-          "x2": { "signal": "width + labelX - labelLineGap" },
+          "x2": { "signal": "width + labelX + labelOffset - labelLineGap" },
           "y": { "field": "y0" },
           "y2": { "field": "yLabel" },
           "stroke": { "scale": "color", "field": "chainage_series" },
@@ -248,10 +260,10 @@
       "from": { "data": "endLabels" },
       "encode": {
         "update": {
-          "x": { "signal": "width + labelX" },
+          "x": { "signal": "width + labelX + labelOffset" },
           "y": { "field": "yLabel" },
           "text": { "field": "chainage_series" },
-          "align": { "value": "left" },
+          "align": { "value": "right" },
           "baseline": { "value": "middle" },
           "fill": { "scale": "color", "field": "chainage_series" },
           "opacity": { "value": 1 }

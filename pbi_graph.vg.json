@@ -3,6 +3,16 @@
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
 
   "signals": [
+    {
+      "name": "pad",
+      "value": {
+        "left": 0,
+        "top": 0,
+        "right": 0,
+        "bottom": 0
+      }
+    },
+
     { "name": "rainMax", "value": 40 },
     { "name": "padFrac", "value": 0.1 },
 
@@ -37,6 +47,8 @@
       "update": "length(data('stats')) ? data('stats')[0].domainMin : 0"
     }
   ],
+
+  "padding": { "signal": "pad" },
 
   "data": [
     {
