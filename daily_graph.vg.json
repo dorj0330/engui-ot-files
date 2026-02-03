@@ -1,7 +1,8 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
-
+"width": 500,
+"height": 300,
   "signals": [
     {
       "name": "pad",
@@ -52,8 +53,15 @@
 
   "data": [
     {
-      "name": "dataset",
-
+      "name": "raw",
+      "url": "https://raw.githubusercontent.com/dorj0330/engui-ot-files/refs/heads/main/data.csv",
+      "format": {
+        "type": "csv",
+        "parse": {
+          "Average of Total Head": "number",
+          "Average of Daily rainfall": "number"
+        }
+      },
       "transform": [
         {
           "type": "formula",
@@ -84,7 +92,7 @@
 
     {
       "name": "rainByDay",
-      "source": "dataset",
+      "source": "raw",
       "transform": [
         {
           "type": "aggregate",
@@ -103,7 +111,7 @@
 
     {
       "name": "headByDay",
-      "source": "dataset",
+      "source": "raw",
       "transform": [
         {
           "type": "aggregate",
@@ -174,7 +182,7 @@
     },
 
     {
-      "name": "endLabelsdataset",
+      "name": "endLabelsraw",
       "source": "lastPoints",
       "transform": [
         { "type": "formula", "as": "xLabel", "expr": "width + 30" },
@@ -198,7 +206,7 @@
 
     {
       "name": "endLabels",
-      "source": "endLabelsdataset",
+      "source": "endLabelsraw",
       "transform": [
         {
           "type": "formula",
