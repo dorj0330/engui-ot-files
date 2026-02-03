@@ -2,13 +2,8 @@
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
   "signals": [
-    {
-      "name": "pad",
-      "value": { "left": 0, "top": 0, "right": 0, "bottom": 0 }
-    },
     { "name": "padFrac", "value": 0.1 },
 
-    { "name": "endLabelSpace", "value": 100 },
     { "name": "labelPad", "value": 8 },
     { "name": "labelCollide", "value": 15 },
     { "name": "labelIters", "value": 6 },
@@ -45,6 +40,12 @@
     {
       "name": "xMaxSafe",
       "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMax : now()"
+    },
+    { "name": "endLabelSpace", "value": 140 },
+    { "name": "maxEndChars", "value": 18 },
+    {
+      "name": "pad",
+      "update": "{left:5, top:5, right:endLabelSpace, bottom:40}"
     }
   ],
 
@@ -220,7 +221,7 @@
       "name": "x",
       "type": "time",
       "domain": { "data": "xDates", "field": "DateDay" },
-      "range": [0, { "signal": "width + endLabelSpace" }]
+      "range": "width"
     },
     {
       "name": "y",
@@ -366,7 +367,9 @@
         "update": {
           "x": { "signal": "width + labelX" },
           "y": { "field": "yLabel" },
-          "text": { "field": "ChainageLabel" },
+          "text": {
+            "signal": "length(toString(datum.ChainageLabel)) > maxEndChars ? slice(toString(datum.ChainageLabel), 0, maxEndChars) + '…' : toString(datum.ChainageLabel)"
+          },
           "align": { "value": "left" },
           "baseline": { "value": "middle" },
           "fill": { "scale": "color", "field": "ChainageLabel" },
