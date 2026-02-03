@@ -1,17 +1,13 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
-"width": 500,
-"height": 300,
+  "width": 500,
+  "height": 300,
+
   "signals": [
     {
       "name": "pad",
-      "value": {
-        "left": 0,
-        "top": 0,
-        "right": 0,
-        "bottom": 0
-      }
+      "value": { "left": 0, "top": 0, "right": 0, "bottom": 0 }
     },
 
     { "name": "rainMax", "value": 40 },
@@ -46,6 +42,15 @@
     {
       "name": "domainMinSafe",
       "update": "length(data('stats')) ? data('stats')[0].domainMin : 0"
+    },
+
+    {
+      "name": "xMinSafe",
+      "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMin : now()"
+    },
+    {
+      "name": "xMaxSafe",
+      "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMax : now()"
     }
   ],
 
@@ -87,6 +92,33 @@
           "type": "filter",
           "expr": "isValid(datum.DateDay) && isValid(datum.TotalHead) && datum.Drillhole_USC != null"
         }
+      ]
+    },
+
+    {
+      "name": "dateExtent",
+      "source": "raw",
+      "transform": [
+        { "type": "filter", "expr": "isValid(datum.DateDay)" },
+        {
+          "type": "aggregate",
+          "fields": ["DateDay", "DateDay"],
+          "ops": ["min", "max"],
+          "as": ["xMin", "xMax"]
+        }
+      ]
+    },
+
+    {
+      "name": "xDates",
+      "transform": [
+        {
+          "type": "sequence",
+          "start": { "signal": "xMinSafe" },
+          "stop": { "signal": "xMaxSafe" },
+          "step": 86400000
+        },
+        { "type": "formula", "as": "DateDay", "expr": "toDate(datum.data)" }
       ]
     },
 
@@ -191,7 +223,6 @@
           "as": "y0",
           "expr": "isValid(datum.TotalHeadDay) ? scale('yHead', datum.TotalHeadDay) : (height/2)"
         },
-
         {
           "type": "force",
           "static": true,
@@ -221,7 +252,7 @@
     {
       "name": "x",
       "type": "time",
-      "domain": { "data": "headByDay", "field": "DateDay" },
+      "domain": { "data": "xDates", "field": "DateDay" },
       "range": "width"
     },
 
