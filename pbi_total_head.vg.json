@@ -11,6 +11,7 @@
     { "name": "rainMax", "value": 40 },
     { "name": "padFrac", "value": 0.1 },
 
+    { "name": "endLabelSpace", "value": 100 },
     { "name": "labelPad", "value": 8 },
     { "name": "labelCollide", "value": 15 },
     { "name": "labelIters", "value": 6 },
@@ -57,7 +58,7 @@
   "data": [
     {
       "name": "dataset",
-      
+
       "transform": [
         {
           "type": "formula",
@@ -253,7 +254,7 @@
       "name": "x",
       "type": "time",
       "domain": { "data": "xDates", "field": "DateDay" },
-      "range": "width"
+      "range": [0, { "signal": "width + endLabelSpace" }]
     },
 
     {
@@ -365,6 +366,7 @@
 
     {
       "type": "group",
+      "clip": true,
       "from": {
         "facet": {
           "data": "headByDay",

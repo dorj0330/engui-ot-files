@@ -4,10 +4,11 @@
   "signals": [
     {
       "name": "pad",
-      "value": { "left": 0, "top": 0, "right": 60, "bottom": 0 }
+      "value": { "left": 0, "top": 0, "right": 0, "bottom": 0 }
     },
     { "name": "padFrac", "value": 0.1 },
 
+    { "name": "endLabelSpace", "value": 100 },
     { "name": "labelPad", "value": 8 },
     { "name": "labelCollide", "value": 15 },
     { "name": "labelIters", "value": 6 },
@@ -219,7 +220,7 @@
       "name": "x",
       "type": "time",
       "domain": { "data": "xDates", "field": "DateDay" },
-      "range": "width"
+      "range": [0, { "signal": "width + endLabelSpace" }]
     },
     {
       "name": "y",
@@ -292,6 +293,7 @@
 
     {
       "type": "group",
+      "clip": true,
       "from": {
         "facet": {
           "data": "New_TailingsByDay",
