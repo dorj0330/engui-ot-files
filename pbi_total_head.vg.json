@@ -3,11 +3,6 @@
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
 
   "signals": [
-    {
-      "name": "pad",
-      "value": { "left": 0, "top": 0, "right": 0, "bottom": 0 }
-    },
-
     { "name": "rainMax", "value": 40 },
     { "name": "padFrac", "value": 0.1 },
 
@@ -48,11 +43,11 @@
       "name": "xMaxSafe",
       "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMax : now()"
     },
-    { "name": "endLabelSpace", "value": 140 },
-    { "name": "maxEndChars", "value": 18 },
+    { "name": "endLabelSpace", "value": 0 },
+    { "name": "maxEndChars", "value": 10 },
     {
       "name": "pad",
-      "update": "{left:5, top:5, right:endLabelSpace, bottom:40}"
+      "update": "{left:8, top:0, right:endLabelSpace, bottom:0}"
     }
   ],
 
@@ -444,7 +439,7 @@
           "x": { "signal": "width + labelX" },
           "y": { "field": "yLabel" },
           "text": {
-            "signal": "length(toString(datum.Drillhole_USC)) > maxEndChars ? slice(toString(datum.Drillhole_USC), 0, maxEndChars) + '…' : toString(datum.Drillhole_USC)"
+            "signal": "length(toString(datum.Drillhole_USC)) > maxEndChars ? slice(toString(datum.Drillhole_USC), 0, maxEndChars-2) + '…' : toString(datum.Drillhole_USC)"
           },
           "align": { "value": "left" },
           "baseline": { "value": "middle" },

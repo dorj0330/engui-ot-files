@@ -41,11 +41,11 @@
       "name": "xMaxSafe",
       "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMax : now()"
     },
-    { "name": "endLabelSpace", "value": 140 },
+    { "name": "endLabelSpace", "value": 38 },
     { "name": "maxEndChars", "value": 18 },
     {
       "name": "pad",
-      "update": "{left:5, top:5, right:endLabelSpace, bottom:40}"
+      "update": "{left:0, top:0, right:endLabelSpace, bottom:0}"
     }
   ],
 
@@ -259,6 +259,7 @@
       "orient": "left",
       "scale": "y",
       "title": "Tailings",
+      "tickCount": 5,
       "grid": true,
       "gridColor": "#e6e6e6",
       "gridOpacity": 1,
