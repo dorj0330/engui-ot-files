@@ -273,7 +273,7 @@
       "orient": "right",
       "scale": "yRain",
       "title": "Precip mm",
-      "tickCount": 5,
+      "tickCount": 2,
       "grid": true,
       "gridColor": "#4A9AFF",
       "gridOpacity": 1,
