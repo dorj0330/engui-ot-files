@@ -90,11 +90,20 @@
         },
         {
           "type": "filter",
-          "expr": "isValid(datum.DateDay) && isValid(datum.TotalHead) && datum.Drillhole_USC != null"
+          "expr": "isValid(datum.DateDay)"
         }
       ]
     },
-
+    {
+      "name": "rawSeries",
+      "source": "raw",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "datum.Drillhole_USC != null && isValid(datum.TotalHead)"
+        }
+      ]
+    },
     {
       "name": "dateExtent",
       "source": "raw",
@@ -124,7 +133,7 @@
 
     {
       "name": "rainByDay",
-      "source": "raw",
+      "source": "rawSeries",
       "transform": [
         {
           "type": "aggregate",
@@ -143,7 +152,7 @@
 
     {
       "name": "headByDay",
-      "source": "raw",
+      "source": "rawSeries",
       "transform": [
         {
           "type": "aggregate",
