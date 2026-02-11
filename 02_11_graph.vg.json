@@ -2,20 +2,37 @@
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
   "width": 550,
-  "height": 400,
+  "height": 500,
+
   "signals": [
     { "name": "rainMax", "value": 40 },
     { "name": "padFrac", "value": 0.1 },
-
     { "name": "labelPad", "value": 1 },
 
-    { "name": "dpi", "value": 96 },
-    { "name": "mm", "value": 2 },
-    { "name": "labelCollide", "update": "mm * dpi / 15" },
-
-    { "name": "labelIters", "value": 6 },
     { "name": "labelX", "value": 70 },
     { "name": "labelLineGap", "value": 6 },
+    { "name": "maxEndChars", "value": 40 },
+
+    { "name": "endFontSize", "value": 11 },
+    { "name": "endLineFactor", "value": 1.25 },
+    { "name": "endLine", "update": "endFontSize * endLineFactor" },
+
+    { "name": "labelColW", "value": 140 },
+    { "name": "maxCols", "value": 3 },
+
+    { "name": "nEnd", "update": "max(1, length(data('lastPoints')))" },
+
+    {
+      "name": "cols",
+      "update": "min(maxCols, max(1, ceil(nEnd * endLine / max(1, height - 2*labelPad))))"
+    },
+    { "name": "rows", "update": "ceil(nEnd / cols)" },
+
+    { "name": "endLabelSpace", "update": "labelX + cols * labelColW + 40" },
+    {
+      "name": "pad",
+      "update": "{left:8, top:0, right:endLabelSpace, bottom:0}"
+    },
 
     {
       "name": "hover",
@@ -46,12 +63,6 @@
     {
       "name": "xMaxSafe",
       "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMax : now()"
-    },
-    { "name": "endLabelSpace", "value": 0 },
-    { "name": "maxEndChars", "value": 40 },
-    {
-      "name": "pad",
-      "update": "{left:8, top:0, right:endLabelSpace, bottom:0}"
     }
   ],
 
@@ -89,12 +100,10 @@
           "as": "Rainfall",
           "expr": "datum['Average of Daily rainfall']"
         },
-        {
-          "type": "filter",
-          "expr": "isValid(datum.DateDay)"
-        }
+        { "type": "filter", "expr": "isValid(datum.DateDay)" }
       ]
     },
+
     {
       "name": "datasetSeries",
       "source": "dataset",
@@ -105,6 +114,7 @@
         }
       ]
     },
+
     {
       "name": "dateExtent",
       "source": "dataset",
@@ -227,85 +237,48 @@
       "name": "endLabelsdataset",
       "source": "lastPoints",
       "transform": [
-        { "type": "formula", "as": "xLabel", "expr": "width + 30" },
         {
           "type": "formula",
           "as": "y0",
           "expr": "isValid(datum.TotalHeadDay) ? scale('yHead', datum.TotalHeadDay) : (height/2)"
         },
-        {
-          "type": "formula",
-          "as": "yInit",
-          "expr": "min(max(datum.y0, labelPad), height - labelPad)"
-        },
 
         { "type": "collect", "sort": { "field": "y0", "order": "ascending" } },
+        { "type": "window", "ops": ["row_number"], "as": ["idx"] },
 
+        { "type": "formula", "as": "col", "expr": "(datum.idx - 1) % cols" },
         {
-          "type": "window",
-          "ops": ["row_number", "count"],
-          "as": ["idx", "n"]
+          "type": "formula",
+          "as": "row",
+          "expr": "floor((datum.idx - 1) / cols)"
         },
 
-        { "type": "formula", "as": "gap", "expr": "labelCollide" },
-
+        { "type": "formula", "as": "stackH", "expr": "(rows - 1) * endLine" },
+        {
+          "type": "formula",
+          "as": "slack",
+          "expr": "max(0, (height - 2*labelPad) - datum.stackH)"
+        },
         {
           "type": "formula",
           "as": "yShift",
-          "expr": "datum.yInit - datum.idx * datum.gap"
-        },
-        {
-          "type": "window",
-          "ops": ["max"],
-          "fields": ["yShift"],
-          "as": ["zMax"],
-          "frame": [null, 0]
-        },
-        {
-          "type": "formula",
-          "as": "ySpread",
-          "expr": "datum.zMax + datum.idx * datum.gap"
+          "expr": "labelPad + datum.slack/2"
         },
 
-        {
-          "type": "formula",
-          "as": "minY",
-          "expr": "labelPad + (datum.idx - 1) * datum.gap"
-        },
-        {
-          "type": "formula",
-          "as": "maxY",
-          "expr": "height - labelPad - (datum.n - datum.idx) * datum.gap"
-        },
-
-        {
-          "type": "formula",
-          "as": "yClamped",
-          "expr": "min(max(datum.ySpread, datum.minY), datum.maxY)"
-        },
-
-        {
-          "type": "joinaggregate",
-          "fields": ["yClamped", "yClamped"],
-          "ops": ["min", "max"],
-          "as": ["yMinAll", "yMaxAll"]
-        },
-        {
-          "type": "formula",
-          "as": "centerShift",
-          "expr": "labelPad - datum.yMinAll"
-        },
         {
           "type": "formula",
           "as": "yLabel",
-          "expr": "min(max(datum.yClamped + datum.centerShift, datum.minY), datum.maxY)"
+          "expr": "datum.yShift + datum.row * endLine"
+        },
+        {
+          "type": "formula",
+          "as": "xText",
+          "expr": "width + labelX + datum.col * labelColW"
         }
       ]
     },
-    {
-      "name": "endLabels",
-      "source": "endLabelsdataset"
-    }
+
+    { "name": "endLabels", "source": "endLabelsdataset" }
   ],
 
   "scales": [
@@ -315,7 +288,6 @@
       "domain": { "data": "xDates", "field": "DateDay" },
       "range": "width"
     },
-
     {
       "name": "yHead",
       "type": "linear",
@@ -324,7 +296,6 @@
       "zero": false,
       "range": "height"
     },
-
     {
       "name": "yRain",
       "type": "linear",
@@ -334,7 +305,6 @@
         { "signal": "scale('yHead', yMinSafe)" }
       ]
     },
-
     {
       "name": "color",
       "type": "ordinal",
@@ -452,7 +422,6 @@
             }
           }
         },
-
         {
           "type": "symbol",
           "name": "pt",
@@ -497,12 +466,30 @@
     },
 
     {
+      "type": "rule",
+      "from": { "data": "endLabels" },
+      "encode": {
+        "update": {
+          "x": { "signal": "width + labelX - labelLineGap" },
+          "x2": { "field": "xText" },
+          "y": { "field": "yLabel" },
+          "y2": { "field": "yLabel" },
+          "stroke": { "scale": "color", "field": "Drillhole_USC" },
+          "opacity": { "value": 1 },
+          "strokeWidth": { "value": 1 }
+        }
+      }
+    },
+
+    {
       "type": "text",
       "from": { "data": "endLabels" },
       "encode": {
         "update": {
-          "x": { "signal": "width + labelX" },
+          "x": { "field": "xText" },
           "y": { "field": "yLabel" },
+          "fontSize": { "signal": "endFontSize" },
+          "lineHeight": { "signal": "endLine" },
           "text": {
             "signal": "length(toString(datum.Drillhole_USC)) > maxEndChars ? slice(toString(datum.Drillhole_USC), 0, maxEndChars-2) + '…' : toString(datum.Drillhole_USC)"
           },
