@@ -2,13 +2,17 @@
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
 
+  "width": 500,
+  "height": 400,
+
   "signals": [
     { "name": "rainMax", "value": 40 },
     { "name": "padFrac", "value": 0.1 },
 
     { "name": "labelPad", "value": 8 },
-    { "name": "labelCollide", "value": 15 },
-    { "name": "labelIters", "value": 6 },
+    { "name": "endFontSize", "value": 12 },
+    { "name": "endLineHeight", "update": "endFontSize + 4" },
+    { "name": "labelIters", "value": 60 },
 
     { "name": "labelX", "value": 70 },
     { "name": "labelLineGap", "value": 6 },
@@ -56,6 +60,14 @@
   "data": [
     {
       "name": "dataset",
+      "url": "https://raw.githubusercontent.com/dorj0330/engui-ot-files/refs/heads/main/total_head_data.csv",
+      "format": {
+        "type": "csv",
+        "parse": {
+          "Average of Total Head": "number",
+          "Average of Daily rainfall": "number"
+        }
+      },
 
       "transform": [
         {
@@ -228,7 +240,7 @@
           "iterations": { "signal": "labelIters" },
           "forces": [
             { "force": "y", "y": { "field": "y0" }, "strength": 1 },
-            { "force": "collide", "radius": { "signal": "labelCollide" } }
+            { "force": "collide", "radius": { "signal": "endLineHeight / 2" } }
           ]
         }
       ]
@@ -241,7 +253,7 @@
         {
           "type": "formula",
           "as": "yLabel",
-          "expr": "min(max(datum.y, labelPad), height - labelPad)"
+          "expr": "min(max(datum.y, endLineHeight / 2), height - endLineHeight / 2)"
         }
       ]
     }
@@ -444,6 +456,7 @@
           "align": { "value": "left" },
           "baseline": { "value": "middle" },
           "fill": { "scale": "color", "field": "Drillhole_USC" },
+          "fontSize": { "signal": "endFontSize" },
           "opacity": { "value": 1 }
         }
       }

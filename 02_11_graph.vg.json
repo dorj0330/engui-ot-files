@@ -1,17 +1,17 @@
 {
   "$schema": "https://vega.github.io/schema/vega/v5.json",
   "autosize": { "type": "fit", "contains": "padding", "resize": true },
-
+  "width": 550,
+  "height": 400,
   "signals": [
     { "name": "rainMax", "value": 40 },
     { "name": "padFrac", "value": 0.1 },
 
     { "name": "labelPad", "value": 1 },
 
-   
-    { "name": "dpi", "value": 96 },                 
-    { "name": "mm", "value": 2 },                 
-    { "name": "labelCollide", "update": "mm * dpi / 7" },  
+    { "name": "dpi", "value": 96 },
+    { "name": "mm", "value": 2 },
+    { "name": "labelCollide", "update": "mm * dpi / 7" },
 
     { "name": "labelIters", "value": 6 },
     { "name": "labelX", "value": 70 },
@@ -60,6 +60,14 @@
   "data": [
     {
       "name": "dataset",
+      "url": "https://raw.githubusercontent.com/dorj0330/engui-ot-files/refs/heads/main/data.csv",
+      "format": {
+        "type": "csv",
+        "parse": {
+          "Average of Total Head": "number",
+          "Average of Daily rainfall": "number"
+        }
+      },
       "transform": [
         {
           "type": "formula",
@@ -220,33 +228,74 @@
       "source": "lastPoints",
       "transform": [
         { "type": "formula", "as": "xLabel", "expr": "width + 30" },
+
         {
           "type": "formula",
           "as": "y0",
           "expr": "isValid(datum.TotalHeadDay) ? scale('yHead', datum.TotalHeadDay) : (height/2)"
         },
-        {
-          "type": "force",
-          "static": true,
-          "iterations": { "signal": "labelIters" },
-          "forces": [
-            { "force": "y", "y": { "field": "y0" }, "strength": 1 },
-            { "force": "collide", "radius": { "signal": "labelCollide" } }
-          ]
-        }
-      ]
-    },
 
-    {
-      "name": "endLabels",
-      "source": "endLabelsdataset",
-      "transform": [
+        {
+          "type": "formula",
+          "as": "yInit",
+          "expr": "min(max(datum.y0, labelPad), height - labelPad)"
+        },
+
+        {
+          "type": "collect",
+          "sort": { "field": "y0", "order": "ascending" }
+        },
+
+        {
+          "type": "window",
+          "ops": ["row_number", "count"],
+          "as": ["idx", "n"]
+        },
+
+        {
+          "type": "formula",
+          "as": "gap",
+          "expr": "labelCollide"
+        },
+
+        {
+          "type": "formula",
+          "as": "yShift",
+          "expr": "datum.yInit - datum.idx * datum.gap"
+        },
+        {
+          "type": "window",
+          "ops": ["max"],
+          "fields": ["yShift"],
+          "as": ["zMax"],
+          "frame": [null, 0]
+        },
+        {
+          "type": "formula",
+          "as": "ySpread",
+          "expr": "datum.zMax + datum.idx * datum.gap"
+        },
+
+        {
+          "type": "formula",
+          "as": "minY",
+          "expr": "labelPad + (datum.idx - 1) * datum.gap"
+        },
+        {
+          "type": "formula",
+          "as": "maxY",
+          "expr": "height - labelPad - (datum.n - datum.idx) * datum.gap"
+        },
         {
           "type": "formula",
           "as": "yLabel",
-          "expr": "min(max(datum.y, labelPad), height - labelPad)"
+          "expr": "min(max(datum.ySpread, datum.minY), datum.maxY)"
         }
       ]
+    },
+    {
+      "name": "endLabels",
+      "source": "endLabelsdataset"
     }
   ],
 
