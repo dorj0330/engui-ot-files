@@ -11,7 +11,7 @@
 
     { "name": "dpi", "value": 96 },
     { "name": "mm", "value": 2 },
-    { "name": "labelCollide", "update": "mm * dpi / 7" },
+    { "name": "labelCollide", "update": "mm * dpi / 15" },
 
     { "name": "labelIters", "value": 6 },
     { "name": "labelX", "value": 70 },
@@ -228,23 +228,18 @@
       "source": "lastPoints",
       "transform": [
         { "type": "formula", "as": "xLabel", "expr": "width + 30" },
-
         {
           "type": "formula",
           "as": "y0",
           "expr": "isValid(datum.TotalHeadDay) ? scale('yHead', datum.TotalHeadDay) : (height/2)"
         },
-
         {
           "type": "formula",
           "as": "yInit",
           "expr": "min(max(datum.y0, labelPad), height - labelPad)"
         },
 
-        {
-          "type": "collect",
-          "sort": { "field": "y0", "order": "ascending" }
-        },
+        { "type": "collect", "sort": { "field": "y0", "order": "ascending" } },
 
         {
           "type": "window",
@@ -252,11 +247,7 @@
           "as": ["idx", "n"]
         },
 
-        {
-          "type": "formula",
-          "as": "gap",
-          "expr": "labelCollide"
-        },
+        { "type": "formula", "as": "gap", "expr": "labelCollide" },
 
         {
           "type": "formula",
@@ -286,10 +277,28 @@
           "as": "maxY",
           "expr": "height - labelPad - (datum.n - datum.idx) * datum.gap"
         },
+
+        {
+          "type": "formula",
+          "as": "yClamped",
+          "expr": "min(max(datum.ySpread, datum.minY), datum.maxY)"
+        },
+
+        {
+          "type": "joinaggregate",
+          "fields": ["yClamped", "yClamped"],
+          "ops": ["min", "max"],
+          "as": ["yMinAll", "yMaxAll"]
+        },
+        {
+          "type": "formula",
+          "as": "centerShift",
+          "expr": "labelPad - datum.yMinAll"
+        },
         {
           "type": "formula",
           "as": "yLabel",
-          "expr": "min(max(datum.ySpread, datum.minY), datum.maxY)"
+          "expr": "min(max(datum.yClamped + datum.centerShift, datum.minY), datum.maxY)"
         }
       ]
     },
