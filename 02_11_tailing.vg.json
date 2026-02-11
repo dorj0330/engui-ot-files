@@ -1,0 +1,382 @@
+{
+  "$schema": "https://vega.github.io/schema/vega/v5.json",
+  "autosize": { "type": "fit", "contains": "padding", "resize": true },
+  "signals": [
+    { "name": "padFrac", "value": 0.1 },
+
+    { "name": "labelPad", "value": 8 },
+    { "name": "labelCollide", "value": 15 },
+    { "name": "labelIters", "value": 6 },
+
+    { "name": "labelX", "value": 70 },
+    { "name": "labelLineGap", "value": 6 },
+
+    {
+      "name": "hover",
+      "value": null,
+      "on": [
+        { "events": "@pt:mousemove", "update": "datum" },
+        { "events": "view:mouseleave", "update": "null" }
+      ]
+    },
+
+    {
+      "name": "yMinSafe",
+      "update": "length(data('stats')) ? data('stats')[0].yMin : 0"
+    },
+    {
+      "name": "yMaxSafe",
+      "update": "length(data('stats')) ? data('stats')[0].yMax : 1"
+    },
+    {
+      "name": "domainMinSafe",
+      "update": "length(data('stats')) ? data('stats')[0].domainMin : 0"
+    },
+
+    {
+      "name": "xMinSafe",
+      "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMin : now()"
+    },
+    {
+      "name": "xMaxSafe",
+      "update": "length(data('dateExtent')) ? data('dateExtent')[0].xMax : now()"
+    },
+    { "name": "endLabelSpace", "value": 38 },
+    { "name": "maxEndChars", "value": 18 },
+    {
+      "name": "pad",
+      "update": "{left:0, top:0, right:endLabelSpace, bottom:0}"
+    }
+  ],
+
+  "padding": { "signal": "pad" },
+
+  "data": [
+    {
+      "name": "dataset",
+
+      "transform": [
+        {
+          "type": "formula",
+          "as": "DateParsed",
+          "expr": "isString(datum['Date']) ? (isValid(timeParse(datum['Date'], '%Y-%m-%d %H:%M:%S')) ? timeParse(datum['Date'], '%Y-%m-%d %H:%M:%S') : (isValid(timeParse(datum['Date'], '%Y-%m-%dT%H:%M:%S')) ? timeParse(datum['Date'], '%Y-%m-%dT%H:%M:%S') : toDate(replace(datum['Date'], ' ', 'T')))) : toDate(datum['Date'])"
+        },
+        {
+          "type": "formula",
+          "as": "DateDay",
+          "expr": "datetime(year(datum.DateParsed), month(datum.DateParsed), date(datum.DateParsed))"
+        },
+
+        {
+          "type": "formula",
+          "as": "New_TailingsVal",
+          "expr": "toNumber(datum['New_Tailings'])"
+        },
+        {
+          "type": "formula",
+          "as": "ChainageLabel",
+          "expr": "datum['Chainage']"
+        },
+        {
+          "type": "formula",
+          "as": "ChainageNum",
+          "expr": "isString(datum.ChainageLabel) && indexof(datum.ChainageLabel, '+') >= 0 ? (toNumber(split(datum.ChainageLabel,'+')[0]) * 1000 + toNumber(split(datum.ChainageLabel,'+')[1])) : toNumber(datum.ChainageLabel)"
+        }
+      ]
+    },
+
+    {
+      "name": "plotData",
+      "source": "dataset",
+      "transform": [
+        {
+          "type": "filter",
+          "expr": "isValid(datum.DateDay) && isValid(datum.New_TailingsVal) && datum.ChainageLabel != null && isValid(datum.ChainageNum)"
+        }
+      ]
+    },
+
+    {
+      "name": "dateExtent",
+      "source": "dataset",
+      "transform": [
+        { "type": "filter", "expr": "isValid(datum.DateDay)" },
+        {
+          "type": "aggregate",
+          "fields": ["DateDay", "DateDay"],
+          "ops": ["min", "max"],
+          "as": ["xMin", "xMax"]
+        }
+      ]
+    },
+
+    {
+      "name": "xDates",
+      "transform": [
+        {
+          "type": "sequence",
+          "start": { "signal": "xMinSafe" },
+          "stop": { "signal": "xMaxSafe" },
+          "step": 86400000
+        },
+        { "type": "formula", "as": "DateDay", "expr": "toDate(datum.data)" }
+      ]
+    },
+
+    {
+      "name": "New_TailingsByDay",
+      "source": "plotData",
+      "transform": [
+        {
+          "type": "aggregate",
+          "groupby": ["DateDay", "ChainageLabel", "ChainageNum"],
+          "fields": ["New_TailingsVal"],
+          "ops": ["mean"],
+          "as": ["New_TailingsDay"]
+        },
+        {
+          "type": "collect",
+          "sort": {
+            "field": ["ChainageNum", "DateDay"],
+            "order": ["ascending", "ascending"]
+          }
+        }
+      ]
+    },
+
+    {
+      "name": "stats",
+      "source": "New_TailingsByDay",
+      "transform": [
+        {
+          "type": "aggregate",
+          "fields": ["New_TailingsDay", "New_TailingsDay"],
+          "ops": ["min", "max"],
+          "as": ["yMin", "yMax"]
+        },
+        {
+          "type": "formula",
+          "as": "yPad",
+          "expr": "(datum.yMax - datum.yMin) * padFrac"
+        },
+        {
+          "type": "formula",
+          "as": "domainMin",
+          "expr": "datum.yMin - datum.yPad"
+        }
+      ]
+    },
+
+    {
+      "name": "lastPoints",
+      "source": "New_TailingsByDay",
+      "transform": [
+        {
+          "type": "window",
+          "groupby": ["ChainageLabel"],
+          "sort": { "field": "DateDay", "order": "descending" },
+          "ops": ["row_number"],
+          "as": ["rn"]
+        },
+        { "type": "filter", "expr": "datum.rn === 1" }
+      ]
+    },
+
+    {
+      "name": "endLabelsdataset",
+      "source": "lastPoints",
+      "transform": [
+        {
+          "type": "formula",
+          "as": "y0",
+          "expr": "isValid(datum.New_TailingsDay) ? scale('y', datum.New_TailingsDay) : (height/2)"
+        },
+        {
+          "type": "force",
+          "static": true,
+          "iterations": { "signal": "labelIters" },
+          "forces": [
+            { "force": "y", "y": { "field": "y0" }, "strength": 1 },
+            { "force": "collide", "radius": { "signal": "labelCollide" } }
+          ]
+        }
+      ]
+    },
+
+    {
+      "name": "endLabels",
+      "source": "endLabelsdataset",
+      "transform": [
+        {
+          "type": "formula",
+          "as": "yLabel",
+          "expr": "min(max(datum.y, labelPad), height - labelPad)"
+        }
+      ]
+    }
+  ],
+
+  "scales": [
+    {
+      "name": "x",
+      "type": "time",
+      "domain": { "data": "xDates", "field": "DateDay" },
+      "range": "width"
+    },
+    {
+      "name": "y",
+      "type": "linear",
+      "domain": [{ "signal": "domainMinSafe" }, { "signal": "yMaxSafe" }],
+      "nice": true,
+      "zero": false,
+      "range": "height"
+    },
+    {
+      "name": "color",
+      "type": "ordinal",
+      "domain": { "data": "New_TailingsByDay", "field": "ChainageLabel" },
+      "range": { "scheme": "category10" }
+    }
+  ],
+
+  "axes": [
+    {
+      "orient": "bottom",
+      "scale": "x",
+      "title": "Date",
+      "labelAngle": -45,
+      "labelAlign": "right",
+      "tickCount": 12,
+      "format": "%Y-%m-%d",
+      "formatType": "time",
+      "labelOverlap": "parity",
+      "grid": true,
+      "gridColor": "#e6e6e6",
+      "gridOpacity": 1,
+      "gridWidth": 1
+    },
+    {
+      "orient": "left",
+      "scale": "y",
+      "title": "Tailings",
+      "tickCount": 5,
+      "grid": true,
+      "gridColor": "#e6e6e6",
+      "gridOpacity": 1,
+      "gridWidth": 1
+    }
+  ],
+
+  "legends": [
+    {
+      "fill": "color",
+      "title": "Chainage",
+      "orient": "top",
+      "direction": "horizontal",
+      "symbolType": "circle"
+    }
+  ],
+
+  "marks": [
+    {
+      "type": "rule",
+      "encode": {
+        "update": {
+          "x": { "scale": "x", "signal": "hover ? hover.DateDay : null" },
+          "y": { "value": 0 },
+          "y2": { "signal": "height" },
+          "stroke": { "value": "#888" },
+          "strokeWidth": { "value": 1 },
+          "strokeDash": { "value": [4, 4] },
+          "opacity": { "signal": "hover ? 0.7 : 0" }
+        }
+      }
+    },
+
+    {
+      "type": "group",
+      "clip": true,
+      "from": {
+        "facet": {
+          "data": "New_TailingsByDay",
+          "name": "series",
+          "groupby": "ChainageLabel"
+        }
+      },
+      "marks": [
+        {
+          "type": "line",
+          "from": { "data": "series" },
+          "encode": {
+            "update": {
+              "x": { "scale": "x", "field": "DateDay" },
+              "y": { "scale": "y", "field": "New_TailingsDay" },
+              "stroke": { "scale": "color", "field": "ChainageLabel" },
+              "strokeWidth": {
+                "signal": "hover && hover.ChainageLabel === datum['ChainageLabel'] ? 4 : 2"
+              }
+            }
+          }
+        },
+        {
+          "type": "symbol",
+          "name": "pt",
+          "from": { "data": "series" },
+          "encode": {
+            "update": {
+              "x": { "scale": "x", "field": "DateDay" },
+              "y": { "scale": "y", "field": "New_TailingsDay" },
+              "fill": { "scale": "color", "field": "ChainageLabel" },
+              "size": { "value": 80 },
+              "stroke": { "value": "white" },
+              "strokeWidth": {
+                "signal": "hover && (+hover.DateDay) === (+datum.DateDay) ? 2 : 0"
+              },
+              "opacity": {
+                "signal": "hover && (+hover.DateDay) === (+datum.DateDay) && hover.ChainageLabel === datum['ChainageLabel'] ? 1 : 0"
+              },
+              "tooltip": {
+                "signal": "{ 'Chainage': datum.ChainageLabel, 'Date': timeFormat(datum.DateDay, '%Y-%m-%d'), 'New_Tailings': format(datum.New_TailingsDay, '.3f') }"
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    {
+      "type": "rule",
+      "from": { "data": "endLabels" },
+      "encode": {
+        "update": {
+          "x": { "scale": "x", "field": "DateDay" },
+          "x2": { "signal": "width + labelX - labelLineGap" },
+          "y": { "field": "y0" },
+          "y2": { "field": "yLabel" },
+          "stroke": { "scale": "color", "field": "ChainageLabel" },
+          "opacity": { "value": 1 },
+          "strokeWidth": { "value": 1 },
+          "strokeDash": { "value": [3, 3] }
+        }
+      }
+    },
+
+    {
+      "type": "text",
+      "from": { "data": "endLabels" },
+      "encode": {
+        "update": {
+          "x": { "signal": "width + labelX" },
+          "y": { "field": "yLabel" },
+          "text": {
+            "signal": "length(toString(datum.ChainageLabel)) > maxEndChars ? slice(toString(datum.ChainageLabel), 0, maxEndChars) + '…' : toString(datum.ChainageLabel)"
+          },
+          "align": { "value": "left" },
+          "baseline": { "value": "middle" },
+          "fill": { "scale": "color", "field": "ChainageLabel" },
+          "opacity": { "value": 1 }
+        }
+      }
+    }
+  ]
+}
