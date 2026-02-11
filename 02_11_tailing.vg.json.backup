@@ -5,8 +5,6 @@
     "contains": "padding",
     "resize": true
   },
-  "width": 800,
-  "height": 400,
   "signals": [
     {
       "name": "padFrac",
@@ -188,6 +186,7 @@
         }
       ]
     },
+
     {
       "name": "headByDay",
       "source": "datasetSeries",
@@ -410,7 +409,6 @@
     {
       "orient": "bottom",
       "scale": "x",
-      "title": "Date",
       "labelAngle": -45,
       "labelAlign": "right",
       "tickCount": 12,
@@ -425,7 +423,6 @@
     {
       "orient": "left",
       "scale": "y",
-      "title": "Tailings",
       "grid": true,
       "gridColor": "#e6e6e6",
       "gridOpacity": 1,
@@ -435,7 +432,6 @@
   "legends": [
     {
       "fill": "color",
-      "title": "Chainage",
       "orient": "top",
       "direction": "horizontal",
       "columns": 8,
@@ -573,7 +569,7 @@
           },
           "stroke": {
             "scale": "color",
-            "field": "Chainage"
+            "field": "Drillhole_USC"
           },
           "opacity": {
             "value": 1
